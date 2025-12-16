@@ -13,8 +13,6 @@ const MotionDiv = (props: any) => {
     />
   );
 };
-// Kept for parity with older versions; no-op in this preview build.
-const AnimatePresence = ({ children }: any) => <>{children}</>;
 
 // Inject simple CSS keyframes for the fake animation (guarded for browser)
 if (typeof document !== 'undefined') {
