@@ -409,6 +409,7 @@ useEffect(() => {
 
     const locked = lockedOutTeams[key] ?? [];
     const questionShowing = !!revealed[key] && !showAnswer[key];
+    const answerShowing = !!showAnswer[key];
 
     // ENTER = correct (ONLY when question is showing)
     // -> awards points, reveals answer, keeps tile open until SPACE finalizes
