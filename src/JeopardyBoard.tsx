@@ -320,7 +320,7 @@ export default function JeopardyBoard() {
       if (isDone) return;
 
       const questionShowing = !!revealed[key] && !showAnswer[key];
-      const answerShowing = !!showAnswer[key];
+    
 
       // SPACE progression:
       // hidden -> question (or DD wager first)
