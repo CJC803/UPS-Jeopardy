@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 
 // Stubbed framer-motion for Preview with a CSS-based animation
 const MotionDiv = (props: any) => {
