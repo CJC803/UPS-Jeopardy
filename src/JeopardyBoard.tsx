@@ -406,10 +406,9 @@ export default function JeopardyBoard() {
     // If question is showing but answer isn't, SPACE does nothing (judging happens via Enter/W)
     return;
   }
-
   const locked = lockedOutTeams[key] ?? [];
   const questionShowing = !!revealed[key] && !showAnswer[key];
-  const answerShowing = !!showAnswer[key];
+  
 
   // ENTER = correct (ONLY when question is showing)
   // -> awards points, reveals answer, keeps tile open until SPACE finalizes
