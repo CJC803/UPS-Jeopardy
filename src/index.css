@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* keep layout sane */
+html, body, #root { height: 100%; }
+body { margin: 0; }
