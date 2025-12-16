@@ -1,25 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-// Stubbed framer-motion for Preview with a CSS-based animation
-const MotionDiv = (props: any) => {
-  const { className = '', ...rest } = props;
-  return (
-    <div
-      className={
-        className +
-        ' transition-all duration-700 ease-out transform opacity-0 scale-75 animate-fadeScaleIn'
-      }
-      {...rest}
-    />
-  );
-};
+/** ---------------------------------------
+ *  Small CSS animation helper (no framer-motion dep)
+ *  -------------------------------------- */
+function useInjectJeopardyStyles() {
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const id = "jeopardy-fade-scale-style";
+    if (document.getElementById(id)) return;
 
-// Inject simple CSS keyframes for the fake animation (guarded for browser)
-if (typeof document !== 'undefined') {
-  const existing = document.getElementById('jeopardy-fade-scale-style');
-  if (!existing) {
-    const style = document.createElement('style');
-    style.id = 'jeopardy-fade-scale-style';
+    const style = document.createElement("style");
+    style.id = id;
     style.innerHTML = `
       @keyframes fadeScaleIn {
         0% { opacity: 0; transform: scale(0.6); }
@@ -33,12 +24,14 @@ if (typeof document !== 'undefined') {
       }
     `;
     document.head.appendChild(style);
-  }
+  }, []);
 }
 
-// --- Audio helpers ---
+/** ---------------------------------------
+ *  Audio helpers (optional files in /public/sounds/)
+ *  -------------------------------------- */
 const makeAudio = (src: string, opts?: { loop?: boolean }) => {
-  if (typeof Audio === 'undefined') return null as unknown as HTMLAudioElement;
+  if (typeof Audio === "undefined") return null as unknown as HTMLAudioElement;
   const a = new Audio(src);
   if (opts?.loop) a.loop = true;
   return a;
@@ -47,57 +40,60 @@ const makeAudio = (src: string, opts?: { loop?: boolean }) => {
 const safePlay = (a: HTMLAudioElement | null | undefined) => {
   try {
     a?.play?.();
-  } catch {}
+  } catch {
+    // ignore autoplay / load errors
+  }
 };
+
 const safeStop = (a: HTMLAudioElement | null | undefined) => {
   try {
     if (!a) return;
     a.pause();
     a.currentTime = 0;
-  } catch {}
+  } catch {
+    // ignore
+  }
 };
 
-// --- Sound placeholders (user will replace paths with real mp3 files) ---
+// Replace these with your real files if you want audio.
 const sounds = {
-  dailyDouble: makeAudio('/sounds/daily_double.mp3'),
-  revealQuestion: makeAudio('/sounds/reveal_question.mp3'),
-  revealAnswer: makeAudio('/sounds/reveal_answer.mp3'),
-  correct: makeAudio('/sounds/correct.mp3'),
-  incorrect: makeAudio('/sounds/incorrect.mp3'),
-  finalThink: makeAudio('/sounds/final_think.mp3', { loop: true }),
-  timerBeep: makeAudio('/sounds/timer_beep.mp3'),
+  dailyDouble: makeAudio("/sounds/daily_double.mp3"),
+  revealQuestion: makeAudio("/sounds/reveal_question.mp3"),
+  revealAnswer: makeAudio("/sounds/reveal_answer.mp3"),
+  correct: makeAudio("/sounds/correct.mp3"),
+  incorrect: makeAudio("/sounds/incorrect.mp3"),
+  finalThink: makeAudio("/sounds/final_think.mp3", { loop: true }),
+  timerBeep: makeAudio("/sounds/timer_beep.mp3"),
 };
 
+/** ---------------------------------------
+ *  Types + pure helpers
+ *  -------------------------------------- */
 type TeamResult = { team: number; score: number };
-
 type RankedTeam = TeamResult & { rank: number };
 
 function applyFinalWagers(scores: number[], wagers: number[], results: boolean[]) {
-  // Pure function for easy testing.
-  return scores.map((score, i) =>
-    results[i] ? score + (wagers[i] ?? 0) : score - (wagers[i] ?? 0),
-  );
+  return scores.map((score, i) => (results[i] ? score + (wagers[i] ?? 0) : score - (wagers[i] ?? 0)));
 }
 
 function rankTeams(scores: number[]): TeamResult[] {
-  // Sort by score desc; preserve team number for tie handling
   return scores
     .map((score, idx) => ({ team: idx + 1, score }))
     .sort((a, b) => b.score - a.score);
 }
 
+/**
+ * Option A: ties share the same rank (two #1s). If there’s a tie for #1, next rank shown can be #3.
+ * Returns up to 3 entries for a “podium”.
+ */
 function computePodiumWithTies(ranked: TeamResult[]): RankedTeam[] {
-  // Option A: ties share the same rank (e.g., two #1s). Still show a #3 if possible.
-  // Returns up to 3 entries, where each entry has an assigned shared rank.
   if (ranked.length === 0) return [];
 
   const withRanks: RankedTeam[] = [];
   let currentRank = 1;
 
   for (let i = 0; i < ranked.length; i++) {
-    if (i > 0 && ranked[i].score < ranked[i - 1].score) {
-      currentRank = i + 1;
-    }
+    if (i > 0 && ranked[i].score < ranked[i - 1].score) currentRank = i + 1;
     withRanks.push({ ...ranked[i], rank: currentRank });
   }
 
@@ -113,208 +109,136 @@ function computePodiumWithTies(ranked: TeamResult[]): RankedTeam[] {
   return podium.slice(0, 3);
 }
 
+type QA = Record<string, { q: string; a: string }>;
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+/** ---------------------------------------
+ *  Main component
+ *  -------------------------------------- */
 export default function JeopardyBoard() {
-  const categories = ['AI Basics', 'AI in Everyday Life', 'Famous AI Milestones', 'Ethics & AI'];
+  useInjectJeopardyStyles();
+
+  // Board data
+  const categories = ["AI Basics", "AI in Everyday Life", "Famous AI Milestones", "Ethics & AI"];
   const values = [100, 200, 300, 400, 500];
 
-  const qa: Record<string, { q: string; a: string }> = {
-    '0-100': {
-      q: 'This term refers to machines that mimic human intelligence.',
-      a: 'What is Artificial Intelligence?',
-    },
-    '0-200': {
-      q: 'The branch of AI focused on learning from data.',
-      a: 'What is Machine Learning?',
-    },
-    '0-300': {
-      q: 'The type of AI that can perform only one specific task.',
-      a: 'What is Narrow AI?',
-    },
-    '0-400': {
-      q: 'The year the term "Artificial Intelligence" was coined.',
-      a: 'What is 1956?',
-    },
-    '0-500': {
-      q: 'The test designed by Alan Turing to measure machine intelligence.',
-      a: 'What is the Turing Test?',
-    },
+  // Key format: `${col}-${value}` e.g. "1-400"
+  const getKey = (col: number, rowVal: number) => `${col}-${rowVal}`;
 
-    '1-100': {
-      q: 'This AI assistant was introduced by Apple in 2011.',
-      a: 'What is Siri?',
-    },
-    '1-200': {
-      q: 'Netflix uses this type of AI to recommend shows.',
-      a: 'What is a Recommendation System?',
-    },
-    '1-300': {
-      q: 'The AI behind self-driving cars relies heavily on this type of sensor.',
-      a: 'What is Lidar?',
-    },
-    '1-400': {
-      q: 'This AI model powers ChatGPT.',
-      a: 'What is GPT?',
-    },
-    '1-500': {
-      q: 'The company that created AlphaGo.',
-      a: 'What is DeepMind?',
-    },
+  const qa: QA = {
+    "0-100": { q: "This term refers to machines that mimic human intelligence.", a: "What is Artificial Intelligence?" },
+    "0-200": { q: "The branch of AI focused on learning from data.", a: "What is Machine Learning?" },
+    "0-300": { q: "The type of AI that can perform only one specific task.", a: "What is Narrow AI?" },
+    "0-400": { q: 'The year the term "Artificial Intelligence" was coined.', a: "What is 1956?" },
+    "0-500": { q: "The test designed by Alan Turing to measure machine intelligence.", a: "What is the Turing Test?" },
 
-    '2-100': {
-      q: "IBM's AI that beat Garry Kasparov in chess.",
-      a: 'What is Deep Blue?',
-    },
-    '2-200': {
-      q: 'Year AlphaGo defeated a world champion in Go.',
-      a: 'What is 2016?',
-    },
-    '2-300': {
-      q: 'The AI that beat humans in Jeopardy.',
-      a: 'What is Watson?',
-    },
-    '2-400': {
-      q: 'The first chatbot created in the 1960s.',
-      a: 'What is ELIZA?',
-    },
-    '2-500': {
-      q: 'The AI that generated realistic images from text prompts in 2022.',
-      a: 'What is DALL·E?',
-    },
+    "1-100": { q: "This AI assistant was introduced by Apple in 2011.", a: "What is Siri?" },
+    "1-200": { q: "Netflix uses this type of AI to recommend shows.", a: "What is a Recommendation System?" },
+    "1-300": { q: "Self-driving cars rely heavily on this type of sensor to map surroundings.", a: "What is LiDAR?" },
+    "1-400": { q: "This family of language models powers ChatGPT.", a: "What is GPT?" },
+    "1-500": { q: "The company that created AlphaGo.", a: "What is DeepMind?" },
 
-    '3-100': {
-      q: 'The term for bias in AI systems.',
-      a: 'What is Algorithmic Bias?',
-    },
-    '3-200': {
-      q: 'This principle ensures AI decisions can be explained.',
-      a: 'What is Explainability?',
-    },
-    '3-300': {
-      q: "The EU's major AI regulation proposal.",
-      a: 'What is the AI Act?',
-    },
-    '3-400': {
-      q: 'The concept of AI behaving in a way that aligns with human values.',
-      a: 'What is AI Alignment?',
-    },
-    '3-500': {
-      q: 'The term for unintended harmful consequences of AI.',
-      a: 'What is AI Risk?',
-    },
+    "2-100": { q: "IBM's AI that beat Garry Kasparov in chess.", a: "What is Deep Blue?" },
+    "2-200": { q: "Year AlphaGo defeated a world champion in Go.", a: "What is 2016?" },
+    "2-300": { q: "The AI system that beat humans on Jeopardy! (2011).", a: "What is Watson?" },
+    "2-400": { q: "The first famous chatbot created in the 1960s.", a: "What is ELIZA?" },
+    "2-500": { q: "A text-to-image model released in 2022 that popularized prompt-based image generation.", a: "What is DALL·E?" },
+
+    "3-100": { q: "The term for systematic unfairness in AI outcomes.", a: "What is Algorithmic Bias?" },
+    "3-200": { q: "This principle ensures AI decisions can be explained to humans.", a: "What is Explainability?" },
+    "3-300": { q: "The EU’s major AI regulation proposal.", a: "What is the AI Act?" },
+    "3-400": { q: "The idea of AI behavior matching human values and intent.", a: "What is AI Alignment?" },
+    "3-500": { q: "The term for unintended harmful consequences of AI systems.", a: "What is AI Risk?" },
   };
 
-  // Core board state
+  /** ---------------------------------------
+   *  Core state
+   *  -------------------------------------- */
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [showAnswer, setShowAnswer] = useState<Record<string, boolean>>({});
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
 
   const [presentationMode, setPresentationMode] = useState(false);
-  const [dailyDoubles, setDailyDoubles] = useState<string[]>([]);
-  const [showDDAnimation, setShowDDAnimation] = useState(false);
-
   const [activeRow, setActiveRow] = useState(0); // index into values
   const [activeCol, setActiveCol] = useState(0); // index into categories
 
-  // Team / scoring state
-  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
-  const [lockedOutTeams, setLockedOutTeams] = useState<Record<string, number[]>>({});
-  const [teamScores, setTeamScores] = useState([0, 0, 0, 0]);
+  const [teamScores, setTeamScores] = useState<number[]>([0, 0, 0, 0]);
+  const [selectedTeam, setSelectedTeam] = useState<number | null>(null); // 0..3
+  const [lockedOutTeams, setLockedOutTeams] = useState<Record<string, number[]>>({}); // tileKey -> teamIdx[]
+  const activeKey = getKey(activeCol, values[activeRow]);
+  const activeLockedTeams = lockedOutTeams[activeKey] ?? [];
 
-  // Daily Double wagers keyed by tile key (e.g. "1-400")
+  // Daily Doubles
+  const [dailyDoubles, setDailyDoubles] = useState<string[]>([]);
+  const [showDDAnimation, setShowDDAnimation] = useState(false);
+
+  // Wagers per tile
   const [ddWagers, setDdWagers] = useState<Record<string, number>>({});
-  const [wagerModal, setWagerModal] = useState<{ key: string } | null>(null);
+  const [wagerModal, setWagerModal] = useState<{
+    key: string;
+    teamIdx: number; // 0..3
+    min: number;
+    max: number;
+  } | null>(null);
 
-  // Final Jeopardy state
+  // Final Jeopardy
   const [finalJeopardy, setFinalJeopardy] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [finalWagers, setFinalWagers] = useState([0, 0, 0, 0]);
-  const [finalCategory] = useState('Legendary Final Category');
-  const [finalQuestion] = useState(
-    'This is a test Final Jeopardy question so you can verify wagers, timer, and reveal flow works.',
-  );
-  const [finalResults, setFinalResults] = useState([true, true, true, true]);
-  const [finalAnswer] = useState('This is the test Final Jeopardy answer.');
+
+  const [finalCategory] = useState("Legendary Final Category");
+  const [finalQuestion] = useState("This is a test Final Jeopardy question so you can verify wagers, timer, and reveal flow works.");
+  const [finalAnswer] = useState("This is the test Final Jeopardy answer.");
+
+  const [finalWagers, setFinalWagers] = useState<number[]>([0, 0, 0, 0]);
+  const [finalResults, setFinalResults] = useState<boolean[]>([true, true, true, true]);
   const [finalRevealQuestion, setFinalRevealQuestion] = useState(false);
+
   const [finalTimerEnabled, setFinalTimerEnabled] = useState(false);
   const [finalCountdown, setFinalCountdown] = useState(45);
   const [finalApplied, setFinalApplied] = useState(false);
 
-  const getKey = (col: number, rowVal: number) => `${col}-${rowVal}`;
+  const finalTimerId = useRef<number | null>(null);
 
-  const activeValue = values[activeRow];
-  const activeKey = getKey(activeCol, activeValue);
-  const activeLockedTeams = lockedOutTeams[activeKey] ?? [];
-
-  // Lightweight runtime tests (opt-in): set window.__RUN_TESTS__ = true in DevTools.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!(window as any).__RUN_TESTS__) return;
-
-    // Existing tests
-    {
-      const scores = [100, 200, 300, 400];
-      const wagers = [10, 20, 30, 40];
-      const results = [true, false, true, false];
-      const out = applyFinalWagers(scores, wagers, results);
-      console.assert(out[0] === 110, 'Final wager apply: team1');
-      console.assert(out[1] === 180, 'Final wager apply: team2');
-      console.assert(out[2] === 330, 'Final wager apply: team3');
-      console.assert(out[3] === 360, 'Final wager apply: team4');
-    }
-
-    {
-      const ranked = rankTeams([0, 50, 10, 50]);
-      console.assert(
-        ranked[0].score === 50 && ranked[1].score === 50,
-        'Ranking handles ties (stable not guaranteed)',
-      );
-    }
-
-    // Added tests: tie podium behavior (Option A)
-    {
-      const ranked = rankTeams([400, 400, 250, 100]);
-      const podium = computePodiumWithTies(ranked);
-      console.assert(podium.length === 3, 'Podium returns 3 entries when possible');
-      console.assert(podium[0].rank === 1 && podium[1].rank === 1, 'Two teams tied for #1 share rank 1');
-      console.assert(podium[2].rank === 3, 'After a tie for #1, next place is #3');
-    }
-
-    {
-      const ranked = rankTeams([500, 300, 300, 200]);
-      const podium = computePodiumWithTies(ranked);
-      console.assert(podium[0].rank === 1, 'Solo #1 is rank 1');
-      console.assert(podium[1].rank === 2 && podium[2].rank === 2, 'Tie for #2 shares rank 2');
-    }
-
-    // Added tests: all tied
-    {
-      const ranked = rankTeams([100, 100, 100, 100]);
-      const podium = computePodiumWithTies(ranked);
-      console.assert(podium.length === 3, 'All tied returns first 3 as podium');
-      console.assert(podium.every((p) => p.rank === 1), 'All tied share rank 1');
-    }
-  }, []);
-
-  // Roll daily doubles once on mount
+  /** ---------------------------------------
+   *  Init Daily Doubles (2 random tiles)
+   *  -------------------------------------- */
   useEffect(() => {
     const allKeys = Object.keys(qa);
-    const randomKeys: string[] = [];
-    while (randomKeys.length < 2) {
-      const random = allKeys[Math.floor(Math.random() * allKeys.length)];
-      if (!randomKeys.includes(random)) randomKeys.push(random);
+    const picked: string[] = [];
+    while (picked.length < 2 && allKeys.length >= 2) {
+      const r = allKeys[Math.floor(Math.random() * allKeys.length)];
+      if (!picked.includes(r)) picked.push(r);
     }
-    setDailyDoubles(randomKeys);
+    setDailyDoubles(picked);
   }, []);
 
+  /** ---------------------------------------
+   *  Reset helpers
+   *  -------------------------------------- */
   const resetBoard = () => {
     setRevealed({});
     setShowAnswer({});
     setCompleted({});
     setTeamScores([0, 0, 0, 0]);
-    setDdWagers({});
-    setWagerModal(null);
     setLockedOutTeams({});
     setSelectedTeam(null);
+    setDdWagers({});
+    setWagerModal(null);
+    setPresentationMode(false);
+    setActiveRow(0);
+    setActiveCol(0);
+
+    // Re-roll Daily Doubles on reset
+    const allKeys = Object.keys(qa);
+    const picked: string[] = [];
+    while (picked.length < 2 && allKeys.length >= 2) {
+      const r = allKeys[Math.floor(Math.random() * allKeys.length)];
+      if (!picked.includes(r)) picked.push(r);
+    }
+    setDailyDoubles(picked);
   };
 
   const resetFinalJeopardy = () => {
@@ -326,10 +250,11 @@ export default function JeopardyBoard() {
     setFinalRevealQuestion(false);
     setFinalTimerEnabled(false);
     setFinalCountdown(45);
+    if (finalTimerId.current != null) window.clearInterval(finalTimerId.current);
+    finalTimerId.current = null;
     safeStop(sounds.finalThink);
   };
 
-  // Helper to finalize a tile (hide everything, mark done)
   const finalizeTile = (key: string) => {
     setCompleted((p) => ({ ...p, [key]: true }));
     setRevealed((p) => ({ ...p, [key]: false }));
@@ -338,152 +263,15 @@ export default function JeopardyBoard() {
     setSelectedTeam(null);
   };
 
-  // Keyboard controls in presentation mode (navigation + reveal + scoring)
-useEffect(() => {
-  const handleKey = (e: KeyboardEvent) => {
-    if (finalJeopardy || wagerModal) return;
-    if (!presentationMode) return;
-
-    const key = getKey(activeCol, values[activeRow]);
-    const isDD = dailyDoubles.includes(key);
-    const val = values[activeRow];
-    const award = isDD ? (ddWagers[key] ?? val) : val;
-
-    // --- Tile navigation ---
-    if (e.key === "ArrowUp") return setActiveRow((r) => Math.max(0, r - 1));
-    if (e.key === "ArrowDown") return setActiveRow((r) => Math.min(values.length - 1, r + 1));
-    if (e.key === "ArrowLeft") return setActiveCol((c) => Math.max(0, c - 1));
-    if (e.key === "ArrowRight") return setActiveCol((c) => Math.min(categories.length - 1, c + 1));
-
-    // --- Team selection (numbers 1–4) ---
-    if (["1", "2", "3", "4"].includes(e.key)) {
-      setSelectedTeam(Number(e.key) - 1);
-      return;
-    }
-
-    // If tile is already completed, ignore reveal/judge keys
-    if (completed[key]) {
-      if (e.key === "Escape") setPresentationMode(false);
-      return;
-    }
-
-    // SPACE = progression:
-    // hidden -> reveal question
-    // (if answer already revealed) -> finalize tile
-    if (e.key === " ") {
-      e.preventDefault();
-
-      // Daily Double entry ONLY when going from hidden -> question
-      if (isDD && !revealed[key] && !showAnswer[key]) {
-        // Require a team selected before wagering (optional but recommended)
-        if (selectedTeam == null) return;
-
-        safePlay(sounds.dailyDouble);
-        setShowDDAnimation(true);
-        setTimeout(() => {
-          setShowDDAnimation(false);
-          setWagerModal({ key });
-        }, 1500);
-        return;
-      }
-
-      // hidden -> question
-      if (!revealed[key]) {
-        safePlay(sounds.revealQuestion);
-        setRevealed((p) => ({ ...p, [key]: true }));
-        setShowAnswer((p) => ({ ...p, [key]: false }));
-        setLockedOutTeams((p) => ({ ...p, [key]: [] }));
-        return;
-      }
-
-      // if answer is showing, SPACE finishes the tile
-      if (showAnswer[key]) {
-        safePlay(sounds.incorrect);
-        finalizeTile(key);
-        return;
-      }
-
-      // If question is showing but answer isn't, SPACE does nothing (judging happens via Enter/W)
-      return;
-    }
-
-    const locked = lockedOutTeams[key] ?? [];
-    const questionShowing = !!revealed[key] && !showAnswer[key];
-    const answerShowing = !!showAnswer[key];
-
-    // ENTER = correct (ONLY when question is showing)
-    // -> awards points, reveals answer, keeps tile open until SPACE finalizes
-    if (e.key === "Enter" && questionShowing) {
-      if (selectedTeam == null) return;
-      if (locked.includes(selectedTeam)) return;
-
-      setTeamScores((ts) => ts.map((v, i) => (i === selectedTeam ? v + award : v)));
-      safePlay(sounds.correct);
-
-      // Reveal the answer (do NOT finalize yet)
-      safePlay(sounds.revealAnswer);
-      setShowAnswer((p) => ({ ...p, [key]: true }));
-      return;
-    }
-
-    // W = wrong (ONLY when question is showing)
-    // -> deducts, locks that team out, allows selecting another team and trying again
-    if (e.key.toLowerCase() === "w" && questionShowing) {
-      if (selectedTeam == null) return;
-      if (locked.includes(selectedTeam)) return;
-
-      setTeamScores((ts) => ts.map((v, i) => (i === selectedTeam ? v - award : v)));
-      setLockedOutTeams((p) => ({
-        ...p,
-        [key]: [...(p[key] ?? []), selectedTeam],
-      }));
-      safePlay(sounds.incorrect);
-
-      const updatedLocked = [...locked, selectedTeam];
-
-      // If all 4 teams are locked out, reveal answer + finalize immediately
-      if ([0, 1, 2, 3].every((t) => updatedLocked.includes(t))) {
-        safePlay(sounds.revealAnswer);
-        setShowAnswer((p) => ({ ...p, [key]: true }));
-        finalizeTile(key);
-      }
-
-      return;
-    }
-
-    // ESC exits presentation mode
-    if (e.key === "Escape") {
-      setPresentationMode(false);
-      return;
-    }
-  };
-
-  document.addEventListener("keydown", handleKey);
-  return () => document.removeEventListener("keydown", handleKey);
-}, [
-  presentationMode,
-  activeCol,
-  activeRow,
-  revealed,
-  showAnswer,
-  completed,
-  dailyDoubles,
-  wagerModal,
-  finalJeopardy,
-  ddWagers,
-  lockedOutTeams,
-  selectedTeam,
-]);
-
-  // Final Jeopardy countdown tick
+  /** ---------------------------------------
+   *  Final Jeopardy countdown
+   *  -------------------------------------- */
   useEffect(() => {
     if (!finalJeopardy || !finalTimerEnabled || !finalRevealQuestion) return;
-    if (finalCountdown <= 0) {
-      safeStop(sounds.finalThink);
-      return;
-    }
 
-    const id = window.setInterval(() => {
+    if (finalTimerId.current != null) window.clearInterval(finalTimerId.current);
+
+    finalTimerId.current = window.setInterval(() => {
       setFinalCountdown((c) => {
         const next = c > 0 ? c - 1 : 0;
         if (next === 0) safeStop(sounds.finalThink);
@@ -491,28 +279,175 @@ useEffect(() => {
       });
     }, 1000);
 
-    return () => window.clearInterval(id);
-  }, [finalJeopardy, finalTimerEnabled, finalRevealQuestion, finalCountdown]);
+    return () => {
+      if (finalTimerId.current != null) window.clearInterval(finalTimerId.current);
+      finalTimerId.current = null;
+    };
+  }, [finalJeopardy, finalTimerEnabled, finalRevealQuestion]);
 
-  // Mouse click behavior (host mode only)
-  const handleClick = (col: number, rowIndex: number) => {
+  /** ---------------------------------------
+   *  Keyboard controls (presentation mode)
+   *  -------------------------------------- */
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (!presentationMode) return;
+      if (finalJeopardy || wagerModal) return;
+
+      const key = getKey(activeCol, values[activeRow]);
+      const isDone = !!completed[key];
+      const isDD = dailyDoubles.includes(key);
+      const val = values[activeRow];
+      const award = isDD ? (ddWagers[key] ?? val) : val;
+
+      // Navigation
+      if (e.key === "ArrowUp") return setActiveRow((r) => Math.max(0, r - 1));
+      if (e.key === "ArrowDown") return setActiveRow((r) => Math.min(values.length - 1, r + 1));
+      if (e.key === "ArrowLeft") return setActiveCol((c) => Math.max(0, c - 1));
+      if (e.key === "ArrowRight") return setActiveCol((c) => Math.min(categories.length - 1, c + 1));
+
+      // Team select 1-4
+      if (["1", "2", "3", "4"].includes(e.key)) {
+        setSelectedTeam(Number(e.key) - 1);
+        return;
+      }
+
+      // Exit presentation
+      if (e.key === "Escape") {
+        setPresentationMode(false);
+        return;
+      }
+
+      if (isDone) return;
+
+      const questionShowing = !!revealed[key] && !showAnswer[key];
+      const answerShowing = !!showAnswer[key];
+
+      // SPACE progression:
+      // hidden -> question (or DD wager first)
+      // answerShowing -> finalize
+      if (e.key === " ") {
+        e.preventDefault();
+
+        // DD: only when going hidden -> question
+        if (isDD && !revealed[key] && !showAnswer[key]) {
+          if (selectedTeam == null) return; // require selection for DD wager
+          const min = 5;
+          const max = Math.max(0, teamScores[selectedTeam] ?? 0);
+          safePlay(sounds.dailyDouble);
+          setShowDDAnimation(true);
+          window.setTimeout(() => {
+            setShowDDAnimation(false);
+            setWagerModal({ key, teamIdx: selectedTeam, min, max });
+          }, 1200);
+          return;
+        }
+
+        // hidden -> question
+        if (!revealed[key]) {
+          safePlay(sounds.revealQuestion);
+          setRevealed((p) => ({ ...p, [key]: true }));
+          setShowAnswer((p) => ({ ...p, [key]: false }));
+          setLockedOutTeams((p) => ({ ...p, [key]: [] }));
+          return;
+        }
+
+        // answer -> finalize
+        if (answerShowing) {
+          safePlay(sounds.incorrect);
+          finalizeTile(key);
+          return;
+        }
+
+        // questionShowing but not answered: do nothing (judge with Enter/W)
+        return;
+      }
+
+      const locked = lockedOutTeams[key] ?? [];
+
+      // ENTER = correct (only when question showing)
+      if (e.key === "Enter" && questionShowing) {
+        if (selectedTeam == null) return;
+        if (locked.includes(selectedTeam)) return;
+
+        setTeamScores((ts) => ts.map((v, i) => (i === selectedTeam ? v + award : v)));
+        safePlay(sounds.correct);
+
+        safePlay(sounds.revealAnswer);
+        setShowAnswer((p) => ({ ...p, [key]: true }));
+        return;
+      }
+
+      // W = wrong (only when question showing)
+      if (e.key.toLowerCase() === "w" && questionShowing) {
+        if (selectedTeam == null) return;
+        if (locked.includes(selectedTeam)) return;
+
+        setTeamScores((ts) => ts.map((v, i) => (i === selectedTeam ? v - award : v)));
+        safePlay(sounds.incorrect);
+
+        const updatedLocked = [...locked, selectedTeam];
+        setLockedOutTeams((p) => ({ ...p, [key]: updatedLocked }));
+
+        // If all teams locked out, reveal + finalize
+        if ([0, 1, 2, 3].every((t) => updatedLocked.includes(t))) {
+          safePlay(sounds.revealAnswer);
+          setShowAnswer((p) => ({ ...p, [key]: true }));
+          finalizeTile(key);
+        }
+
+        return;
+      }
+    };
+
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [
+    presentationMode,
+    finalJeopardy,
+    wagerModal,
+    activeCol,
+    activeRow,
+    categories.length,
+    values,
+    revealed,
+    showAnswer,
+    completed,
+    dailyDoubles,
+    ddWagers,
+    lockedOutTeams,
+    selectedTeam,
+    teamScores,
+  ]);
+
+  /** ---------------------------------------
+   *  Mouse click behavior (host mode)
+   *  -------------------------------------- */
+  const handleClickTile = (col: number, rowIndex: number) => {
     if (presentationMode || finalJeopardy) return;
 
     const val = values[rowIndex];
     const key = getKey(col, val);
     if (completed[key]) return;
 
-    // Daily Double via click: animation -> wager modal -> reveal question
-    if (dailyDoubles.includes(key) && !revealed[key] && !showAnswer[key]) {
+    const isDD = dailyDoubles.includes(key);
+
+    // DD from hidden -> open wager modal
+    if (isDD && !revealed[key] && !showAnswer[key]) {
+      // In host mode, let them pick the team in the modal (default to Team 1)
+      const teamIdx = selectedTeam ?? 0;
+      const min = 5;
+      const max = Math.max(0, teamScores[teamIdx] ?? 0);
+
       safePlay(sounds.dailyDouble);
       setShowDDAnimation(true);
-      setTimeout(() => {
+      window.setTimeout(() => {
         setShowDDAnimation(false);
-        setWagerModal({ key });
-      }, 1500);
+        setWagerModal({ key, teamIdx, min, max });
+      }, 1200);
       return;
     }
 
+    // hidden -> question
     if (!revealed[key]) {
       safePlay(sounds.revealQuestion);
       setRevealed((p) => ({ ...p, [key]: true }));
@@ -520,20 +455,26 @@ useEffect(() => {
       return;
     }
 
+    // question -> answer
     if (!showAnswer[key]) {
       safePlay(sounds.revealAnswer);
       setShowAnswer((p) => ({ ...p, [key]: true }));
       return;
     }
 
-    // If answer already showing and no team was assigned, just complete
+    // answer -> finalize
     safePlay(sounds.incorrect);
     finalizeTile(key);
   };
 
+  /** ---------------------------------------
+   *  Derived data
+   *  -------------------------------------- */
   const ranked = useMemo(() => rankTeams(teamScores), [teamScores]);
 
-  // --- RENDER ---
+  /** ---------------------------------------
+   *  Leaderboard / Podium screen
+   *  -------------------------------------- */
   if (showLeaderboard) {
     const podium = computePodiumWithTies(ranked);
 
@@ -541,17 +482,14 @@ useEffect(() => {
       <div className="min-h-screen bg-[#351C15] w-full flex flex-col items-center justify-center text-white gap-10 p-8">
         <h1 className="text-6xl font-bold text-[#FFB500]">FINAL PODIUM</h1>
 
-        <div className="flex items-end gap-8">
+        <div className="flex items-end gap-8 flex-wrap justify-center">
           {podium.map((r, i) => (
             <div
               key={r.team}
-              className={`flex flex-col items-center justify-end rounded-xl font-bold shadow-xl px-6 py-4 ${
-                i === 1
-                  ? 'bg-[#FFB500] text-[#351C15] h-64'
-                  : i === 0
-                    ? 'bg-[#4B2E1F] text-[#FFB500] h-52'
-                    : 'bg-[#4B2E1F]/80 text-[#FFB500] h-44'
-              }`}
+              className={[
+                "flex flex-col items-center justify-end rounded-xl font-bold shadow-xl px-6 py-4",
+                i === 1 ? "bg-[#FFB500] text-[#351C15] h-64" : i === 0 ? "bg-[#4B2E1F] text-[#FFB500] h-52" : "bg-[#4B2E1F]/80 text-[#FFB500] h-44",
+              ].join(" ")}
             >
               <div className="text-4xl mb-2">#{r.rank}</div>
               <div className="text-2xl">Team {r.team}</div>
@@ -560,17 +498,12 @@ useEffect(() => {
           ))}
         </div>
 
-        <div className="flex gap-4">
-          <button
-            onClick={resetFinalJeopardy}
-            className="mt-8 bg-red-600 text-white px-8 py-4 rounded font-bold text-xl"
-          >
+        <div className="flex gap-4 flex-wrap justify-center">
+          <button onClick={resetFinalJeopardy} className="mt-8 bg-red-600 text-white px-8 py-4 rounded font-bold text-xl">
             Reset Game
           </button>
           <button
-            onClick={() => {
-              setShowLeaderboard(false);
-            }}
+            onClick={() => setShowLeaderboard(false)}
             className="mt-8 bg-[#4B2E1F] text-[#FFB500] px-8 py-4 rounded font-bold text-xl border border-[#FFB500]"
           >
             Back to Board
@@ -580,6 +513,9 @@ useEffect(() => {
     );
   }
 
+  /** ---------------------------------------
+   *  Final Jeopardy screen
+   *  -------------------------------------- */
   if (finalJeopardy) {
     return (
       <div className="min-h-screen bg-[#351C15] w-full flex flex-col items-center justify-center text-white gap-6 p-8">
@@ -589,9 +525,12 @@ useEffect(() => {
         {!finalRevealQuestion && (
           <div className="bg-white text-black p-6 rounded-xl shadow-xl w-full max-w-lg flex flex-col gap-4">
             <h3 className="text-2xl font-bold text-center">Enter Wagers</h3>
+
             {teamScores.map((s, i) => (
               <div key={i} className="flex justify-between items-center gap-3">
-                <span className="font-bold">Team {i + 1} (${s})</span>
+                <span className="font-bold">
+                  Team {i + 1} (${s})
+                </span>
                 <input
                   type="number"
                   min={0}
@@ -600,44 +539,34 @@ useEffect(() => {
                   value={finalWagers[i]}
                   onChange={(e) => {
                     const v = Number(e.target.value);
-                    // Wagers capped at current score (per your rule)
-                    setFinalWagers((w) =>
-                      w.map((x, idx) =>
-                        idx === i ? Math.min(Math.max(v, 0), Math.max(0, s)) : x,
-                      ),
-                    );
+                    setFinalWagers((w) => w.map((x, idx) => (idx === i ? clamp(v, 0, Math.max(0, s)) : x)));
                   }}
                 />
               </div>
             ))}
 
             <button
-              onClick={() => {
-                setFinalRevealQuestion(true);
-              }}
+              onClick={() => setFinalRevealQuestion(true)}
               className="bg-amber-800 text-white py-2 rounded font-bold"
             >
               Lock Wagers & Reveal Question
             </button>
 
             <p className="text-xs text-center text-gray-600 mt-1">
-              Timer will start when you press "Start 45s Timer" after the question is revealed.
+              Timer starts when you press “Start 45s Timer” after the question is revealed.
             </p>
           </div>
         )}
 
         {finalRevealQuestion && (
-          <div className="flex flex-col items-center gap-6 max-w-2xl text-center">
+          <div className="flex flex-col items-center gap-6 max-w-2xl text-center w-full">
             <p className="text-2xl">{finalQuestion}</p>
 
             <div className="bg-white text-black p-5 rounded-xl shadow-xl w-full max-w-2xl">
               <h3 className="text-xl font-bold mb-3">Mark Results</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {teamScores.map((s, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between border rounded-lg px-3 py-2"
-                  >
+                  <div key={i} className="flex items-center justify-between border rounded-lg px-3 py-2">
                     <div className="text-left">
                       <div className="font-bold">Team {i + 1}</div>
                       <div className="text-sm text-gray-600">
@@ -647,27 +576,21 @@ useEffect(() => {
                     <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() =>
-                          setFinalResults((r) => r.map((v, idx) => (idx === i ? true : v)))
-                        }
-                        className={`px-3 py-1 rounded font-bold border ${
-                          finalResults[i]
-                            ? 'bg-green-600 text-white border-green-700'
-                            : 'bg-white text-green-700 border-green-700'
-                        }`}
+                        onClick={() => setFinalResults((r) => r.map((v, idx) => (idx === i ? true : v)))}
+                        className={[
+                          "px-3 py-1 rounded font-bold border",
+                          finalResults[i] ? "bg-green-600 text-white border-green-700" : "bg-white text-green-700 border-green-700",
+                        ].join(" ")}
                       >
                         ✓ Correct
                       </button>
                       <button
                         type="button"
-                        onClick={() =>
-                          setFinalResults((r) => r.map((v, idx) => (idx === i ? false : v)))
-                        }
-                        className={`px-3 py-1 rounded font-bold border ${
-                          !finalResults[i]
-                            ? 'bg-red-600 text-white border-red-700'
-                            : 'bg-white text-red-700 border-red-700'
-                        }`}
+                        onClick={() => setFinalResults((r) => r.map((v, idx) => (idx === i ? false : v)))}
+                        className={[
+                          "px-3 py-1 rounded font-bold border",
+                          !finalResults[i] ? "bg-red-600 text-white border-red-700" : "bg-white text-red-700 border-red-700",
+                        ].join(" ")}
                       >
                         ✕ Wrong
                       </button>
@@ -677,9 +600,7 @@ useEffect(() => {
               </div>
             </div>
 
-            {finalTimerEnabled && (
-              <p className="text-4xl font-bold text-[#FFB500]">{finalCountdown}</p>
-            )}
+            {finalTimerEnabled && <p className="text-4xl font-bold text-[#FFB500]">{finalCountdown}</p>}
 
             <div className="flex flex-col sm:flex-row gap-3">
               <button
@@ -696,7 +617,6 @@ useEffect(() => {
 
               <button
                 onClick={() => {
-                  // Apply once; prevent accidental double-apply.
                   if (!finalApplied) {
                     setTeamScores((scores) => applyFinalWagers(scores, finalWagers, finalResults));
                     setFinalApplied(true);
@@ -713,22 +633,11 @@ useEffect(() => {
             <div className="bg-[#4B2E1F] border border-[#FFB500] text-[#FFB500] rounded-xl p-4 max-w-2xl w-full">
               <div className="text-sm opacity-90 mb-1">Answer</div>
               <div className="text-xl font-bold">{finalAnswer}</div>
-              {!finalApplied && (
-                <div className="text-xs opacity-80 mt-2">
-                  (Scores will update when you reveal the answer.)
-                </div>
-              )}
-              {finalApplied && (
-                <div className="text-xs opacity-80 mt-2">
-                  (Final wagers applied. Leaderboard is ready.)
-                </div>
-              )}
+              {!finalApplied && <div className="text-xs opacity-80 mt-2">(Scores update when you reveal the answer.)</div>}
+              {finalApplied && <div className="text-xs opacity-80 mt-2">(Final wagers applied. Leaderboard is ready.)</div>}
             </div>
 
-            <button
-              onClick={resetFinalJeopardy}
-              className="mt-1 bg-red-600 text-white px-4 py-2 rounded"
-            >
+            <button onClick={resetFinalJeopardy} className="mt-1 bg-red-600 text-white px-4 py-2 rounded">
               Exit Final Jeopardy
             </button>
           </div>
@@ -737,18 +646,18 @@ useEffect(() => {
     );
   }
 
+  /** ---------------------------------------
+   *  Main board screen
+   *  -------------------------------------- */
   return (
     <div className="min-h-screen bg-[#351C15] flex items-start justify-center p-4 relative overflow-hidden">
       <div className="flex w-full max-w-6xl gap-6">
-        {/* Host controls - hidden in presentation mode */}
+        {/* Host controls (hidden in presentation mode) */}
         {!presentationMode && (
           <div className="w-64 bg-gray-800 text-white p-4 rounded-lg flex flex-col gap-3 h-fit sticky top-4">
             <h2 className="text-xl font-bold mb-1">Host Controls</h2>
 
-            <button
-              onClick={resetBoard}
-              className="bg-green-600 py-2 px-3 rounded hover:bg-green-500 text-sm font-semibold"
-            >
+            <button onClick={resetBoard} className="bg-green-600 py-2 px-3 rounded hover:bg-green-500 text-sm font-semibold">
               Reset Board
             </button>
 
@@ -757,7 +666,7 @@ useEffect(() => {
                 setRevealed({});
                 setShowAnswer({});
               }}
-              className="bg-amber-700 py-2 px-3 rounded hover:bg-blue-500 text-sm font-semibold"
+              className="bg-amber-700 py-2 px-3 rounded hover:bg-amber-600 text-sm font-semibold"
             >
               Hide All
             </button>
@@ -787,64 +696,52 @@ useEffect(() => {
               Show Leaderboard Now
             </button>
 
-            {/* Sound Test Panel */}
-            <div className="mt-4 p-3 bg-gray-700 rounded-lg flex flex-col gap-2">
+            {/* Team picker (useful for DD wager default in host mode) */}
+            <div className="mt-2 p-3 bg-gray-700 rounded-lg">
+              <div className="text-sm font-semibold mb-2">Selected Team (for DD)</div>
+              <div className="grid grid-cols-2 gap-2">
+                {[0, 1, 2, 3].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setSelectedTeam(t)}
+                    className={[
+                      "py-1 rounded text-sm font-bold border",
+                      selectedTeam === t ? "bg-white text-gray-900 border-white" : "bg-gray-600 text-white border-gray-500",
+                    ].join(" ")}
+                  >
+                    Team {t + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sound test */}
+            <div className="mt-3 p-3 bg-gray-700 rounded-lg flex flex-col gap-2">
               <h3 className="font-bold text-lg">Sound Test</h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <button
-                  type="button"
-                  onClick={() => safePlay(sounds.dailyDouble)}
-                  className="bg-gray-600 py-1 rounded"
-                >
+                <button type="button" onClick={() => safePlay(sounds.dailyDouble)} className="bg-gray-600 py-1 rounded">
                   Daily Double
                 </button>
-                <button
-                  type="button"
-                  onClick={() => safePlay(sounds.revealQuestion)}
-                  className="bg-gray-600 py-1 rounded"
-                >
-                  Reveal Question
+                <button type="button" onClick={() => safePlay(sounds.revealQuestion)} className="bg-gray-600 py-1 rounded">
+                  Reveal Q
                 </button>
-                <button
-                  type="button"
-                  onClick={() => safePlay(sounds.revealAnswer)}
-                  className="bg-gray-600 py-1 rounded"
-                >
-                  Reveal Answer
+                <button type="button" onClick={() => safePlay(sounds.revealAnswer)} className="bg-gray-600 py-1 rounded">
+                  Reveal A
                 </button>
-                <button
-                  type="button"
-                  onClick={() => safePlay(sounds.correct)}
-                  className="bg-gray-600 py-1 rounded"
-                >
+                <button type="button" onClick={() => safePlay(sounds.correct)} className="bg-gray-600 py-1 rounded">
                   Correct
                 </button>
-                <button
-                  type="button"
-                  onClick={() => safePlay(sounds.incorrect)}
-                  className="bg-gray-600 py-1 rounded"
-                >
+                <button type="button" onClick={() => safePlay(sounds.incorrect)} className="bg-gray-600 py-1 rounded">
                   Incorrect
                 </button>
-                <button
-                  type="button"
-                  onClick={() => safePlay(sounds.finalThink)}
-                  className="bg-gray-600 py-1 rounded"
-                >
+                <button type="button" onClick={() => safePlay(sounds.finalThink)} className="bg-gray-600 py-1 rounded">
                   Final Think
                 </button>
-                <button
-                  type="button"
-                  onClick={() => safeStop(sounds.finalThink)}
-                  className="bg-gray-600 py-1 rounded"
-                >
+                <button type="button" onClick={() => safeStop(sounds.finalThink)} className="bg-gray-600 py-1 rounded">
                   Stop Think
                 </button>
-                <button
-                  type="button"
-                  onClick={() => safePlay(sounds.timerBeep)}
-                  className="bg-gray-600 py-1 rounded"
-                >
+                <button type="button" onClick={() => safePlay(sounds.timerBeep)} className="bg-gray-600 py-1 rounded">
                   Timer Beep
                 </button>
               </div>
@@ -863,33 +760,35 @@ useEffect(() => {
             ))}
           </div>
 
-          {/* Board tiles */}
+          {/* Tiles */}
           <div className="grid grid-cols-4 w-full max-w-4xl gap-3 mt-4">
             {values.map((val, row) =>
               categories.map((_, col) => {
                 const key = getKey(col, val);
                 const isActive = presentationMode && row === activeRow && col === activeCol;
-                const isDone = completed[key];
+                const isDone = !!completed[key];
 
                 return (
                   <div
                     key={key}
-                    onClick={() => handleClick(col, row)}
-                    className={`h-24 flex items-center justify-center rounded text-3xl font-bold cursor-pointer select-none
-                      ${isDone ? 'bg-gray-600 text-gray-400' : 'bg-[#4B2E1F] text-[#FFB500]'}
-                      ${isActive ? 'ring-4 ring-[#FFB500] scale-105' : ''}`}
+                    onClick={() => handleClickTile(col, row)}
+                    className={[
+                      "h-24 flex items-center justify-center rounded text-3xl font-bold cursor-pointer select-none transition-transform",
+                      isDone ? "bg-gray-600 text-gray-400" : "bg-[#4B2E1F] text-[#FFB500]",
+                      isActive ? "ring-4 ring-[#FFB500] scale-105" : "",
+                    ].join(" ")}
                   >
                     {!revealed[key] && !isDone && <span>${val}</span>}
                     {revealed[key] && !showAnswer[key] && !isDone && (
-                      <span className="px-2 text-base text-white">{qa[key].q}</span>
+                      <span className="px-2 text-base text-white">{qa[key]?.q ?? "Missing question"}</span>
                     )}
                     {showAnswer[key] && !isDone && (
-                      <span className="px-2 text-lg italic text-green-200">{qa[key].a}</span>
+                      <span className="px-2 text-lg italic text-green-200">{qa[key]?.a ?? "Missing answer"}</span>
                     )}
                     {isDone && <span className="text-xl">—</span>}
                   </div>
                 );
-              }),
+              })
             )}
           </div>
 
@@ -897,67 +796,102 @@ useEffect(() => {
           {presentationMode && (
             <div className="mt-4 text-yellow-200 text-sm flex flex-col items-center gap-1">
               <div>
-                Active:{' '}
+                Active:{" "}
                 <span className="font-bold">
                   {categories[activeCol]} ${values[activeRow]}
                 </span>
               </div>
               <div>
-                Selected Team:{' '}
-                {selectedTeam != null ? (
-                  <span className="font-bold">Team {selectedTeam + 1}</span>
-                ) : (
-                  <span className="italic">None</span>
-                )}
+                Selected Team:{" "}
+                {selectedTeam != null ? <span className="font-bold">Team {selectedTeam + 1}</span> : <span className="italic">None</span>}
               </div>
               <div>
-                Locked Out:{' '}
-                {activeLockedTeams.length ? (
-                  activeLockedTeams.map((t) => `Team ${t + 1}`).join(', ')
-                ) : (
-                  <span className="italic">None</span>
-                )}
+                Locked Out:{" "}
+                {activeLockedTeams.length ? activeLockedTeams.map((t) => `Team ${t + 1}`).join(", ") : <span className="italic">None</span>}
               </div>
               <div className="text-[11px] text-[#FFB500]/80">
-                Arrows = move • Space = question/finish • 1–4 select team • Enter = correct • W = wrong
+                Arrows = move • Space = question/finish • 1–4 select team • Enter = correct • W = wrong • Esc = exit
               </div>
             </div>
           )}
 
-          {/* Daily Double animation */}
+          {/* Daily Double overlay */}
           {showDDAnimation && (
-            <MotionDiv className="fixed inset-0 flex items-center justify-center text-6xl text-[#FFB500] font-bold bg-black/80 z-50">
+            <div className="fixed inset-0 flex items-center justify-center text-6xl text-[#FFB500] font-bold bg-black/80 z-50 animate-fadeScaleIn">
               DAILY DOUBLE!
-            </MotionDiv>
+            </div>
           )}
 
           {/* Wager modal */}
           {wagerModal && (
             <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-              <div className="bg-white text-black p-6 rounded-xl w-80 flex flex-col gap-3">
+              <div className="bg-white text-black p-6 rounded-xl w-96 flex flex-col gap-3">
                 <h2 className="text-xl font-bold text-center">Daily Double Wager</h2>
-                <p className="text-sm">Team may wager minimum $5 up to their current score.</p>
-                <input
-                  type="number"
-                  min={5}
-                  max={Math.max(0, teamScores[selectedTeam ?? 0])}
-                  className="border p-2 rounded"
-                  onChange={(e) => {
-                    const v = Math.max(5, Number(e.target.value));
-                    setDdWagers((p) => ({
-                      ...p,
-                      [wagerModal.key]: Math.min(v, Math.max(0, teamScores[selectedTeam ?? 0])),
-                    }));
-                  }}
-                />
+
+                <div className="text-sm">
+                  Choose team and wager.
+                  <div className="text-xs text-gray-600 mt-1">Min $5, max current team score.</div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-sm font-semibold">Team</label>
+                  <select
+                    className="border rounded p-2"
+                    value={wagerModal.teamIdx}
+                    onChange={(e) => {
+                      const teamIdx = clamp(Number(e.target.value), 0, 3);
+                      const max = Math.max(0, teamScores[teamIdx] ?? 0);
+                      setWagerModal((m) => (m ? { ...m, teamIdx, max } : m));
+                      setSelectedTeam(teamIdx);
+                    }}
+                  >
+                    {[0, 1, 2, 3].map((t) => (
+                      <option key={t} value={t}>
+                        Team {t + 1} (${teamScores[t]})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-sm font-semibold">Wager</label>
+                  <input
+                    type="number"
+                    min={wagerModal.min}
+                    max={wagerModal.max}
+                    className="border p-2 rounded w-40"
+                    value={ddWagers[wagerModal.key] ?? wagerModal.min}
+                    onChange={(e) => {
+                      const raw = Number(e.target.value);
+                      const v = clamp(isNaN(raw) ? wagerModal.min : raw, wagerModal.min, wagerModal.max);
+                      setDdWagers((p) => ({ ...p, [wagerModal.key]: v }));
+                    }}
+                  />
+                </div>
+
                 <button
                   onClick={() => {
+                    const chosen = wagerModal;
+                    const wager = clamp(ddWagers[chosen.key] ?? chosen.min, chosen.min, chosen.max);
+                    setDdWagers((p) => ({ ...p, [chosen.key]: wager }));
                     setWagerModal(null);
-                    setRevealed((p) => ({ ...p, [wagerModal.key]: true }));
+
+                    // Reveal question after wager locks
+                    safePlay(sounds.revealQuestion);
+                    setRevealed((p) => ({ ...p, [chosen.key]: true }));
+                    setShowAnswer((p) => ({ ...p, [chosen.key]: false }));
+                    setLockedOutTeams((p) => ({ ...p, [chosen.key]: [] }));
                   }}
                   className="bg-[#4B2E1F] text-white py-2 rounded font-bold"
                 >
-                  Lock Wager & Reveal Q
+                  Lock Wager & Reveal Question
+                </button>
+
+                <button
+                  onClick={() => setWagerModal(null)}
+                  className="bg-gray-200 text-gray-900 py-2 rounded font-semibold"
+                >
+                  Cancel
                 </button>
               </div>
             </div>
@@ -968,9 +902,10 @@ useEffect(() => {
             {teamScores.map((s, i) => (
               <div
                 key={i}
-                className={`px-4 py-2 rounded-xl shadow-lg border-2 ${
-                  selectedTeam === i ? 'border-white scale-105' : 'border-[#FFB500]'
-                } bg-[#4B2E1F] text-[#FFB500] text-center min-w-[120px]`}
+                className={[
+                  "px-4 py-2 rounded-xl shadow-lg border-2 bg-[#4B2E1F] text-[#FFB500] text-center min-w-[120px] transition-transform",
+                  selectedTeam === i ? "border-white scale-105" : "border-[#FFB500]",
+                ].join(" ")}
               >
                 <div className="font-bold text-xl">Team {i + 1}</div>
                 <div className="text-2xl">${s}</div>
