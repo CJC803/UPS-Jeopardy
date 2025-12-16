@@ -924,7 +924,7 @@ export default function JeopardyBoard() {
                 )}
               </div>
               <div className="text-[11px] text-[#FFB500]/80">
-                Arrows = move • Space = reveal • 1–4 select team • Enter = correct • W = wrong
+                Arrows = move • Space = question/finish • 1–4 select team • Enter = correct • W = wrong
               </div>
             </div>
           )}
