@@ -341,98 +341,125 @@ export default function JeopardyBoard() {
   // Keyboard controls in presentation mode (navigation + reveal + scoring)
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (finalJeopardy || wagerModal) return;
-      if (!presentationMode) return;
+  if (finalJeopardy || wagerModal) return;
+  if (!presentationMode) return;
 
-      const key = getKey(activeCol, values[activeRow]);
-      const isDD = dailyDoubles.includes(key);
-      const val = values[activeRow];
-      const award = isDD ? ddWagers[key] ?? val : val;
+  const key = getKey(activeCol, values[activeRow]);
+  const isDD = dailyDoubles.includes(key);
+  const val = values[activeRow];
+  const award = isDD ? ddWagers[key] ?? val : val;
 
-      // --- Tile navigation ---
-      if (e.key === 'ArrowUp') return setActiveRow((r) => Math.max(0, r - 1));
-      if (e.key === 'ArrowDown') return setActiveRow((r) => Math.min(values.length - 1, r + 1));
-      if (e.key === 'ArrowLeft') return setActiveCol((c) => Math.max(0, c - 1));
-      if (e.key === 'ArrowRight') return setActiveCol((c) => Math.min(categories.length - 1, c + 1));
+  // --- Tile navigation ---
+  if (e.key === "ArrowUp") return setActiveRow((r) => Math.max(0, r - 1));
+  if (e.key === "ArrowDown") return setActiveRow((r) => Math.min(values.length - 1, r + 1));
+  if (e.key === "ArrowLeft") return setActiveCol((c) => Math.max(0, c - 1));
+  if (e.key === "ArrowRight") return setActiveCol((c) => Math.min(categories.length - 1, c + 1));
 
-      // --- Team selection (numbers 1–4) ---
-      if (['1', '2', '3', '4'].includes(e.key)) {
-        setSelectedTeam(Number(e.key) - 1);
-        return;
-      }
+  // --- Team selection (numbers 1–4) ---
+  if (["1", "2", "3", "4"].includes(e.key)) {
+    setSelectedTeam(Number(e.key) - 1);
+    return;
+  }
 
-      // Space = progression (hidden→question→answer→finish)
-      if (e.key === ' ') {
-        e.preventDefault();
-        if (completed[key]) return;
+  // If tile is already completed, ignore reveal/judge keys
+  if (completed[key]) {
+    if (e.key === "Escape") setPresentationMode(false);
+    return;
+  }
 
-        // Daily Double entry
-        if (isDD && !revealed[key] && !showAnswer[key]) {
-          safePlay(sounds.dailyDouble);
-          setShowDDAnimation(true);
-          setTimeout(() => {
-            setShowDDAnimation(false);
-            setWagerModal({ key });
-          }, 1500);
-          return;
-        }
+  // SPACE = progression:
+  // hidden -> reveal question
+  // (if answer already revealed) -> finalize tile
+  if (e.key === " ") {
+    e.preventDefault();
 
-        if (!revealed[key]) {
-          safePlay(sounds.revealQuestion);
-          setRevealed((p) => ({ ...p, [key]: true }));
-          // When question first shows, clear locked-out list for that tile
-          setLockedOutTeams((p) => ({ ...p, [key]: [] }));
-          return;
-        }
+    // Daily Double entry ONLY when going from hidden -> question
+    if (isDD && !revealed[key] && !showAnswer[key]) {
+      // Require a team selected before wagering (optional but recommended)
+      if (selectedTeam == null) return;
 
-        if (!showAnswer[key]) {
-          safePlay(sounds.revealAnswer);
-          setShowAnswer((p) => ({ ...p, [key]: true }));
-          return;
-        }
+      safePlay(sounds.dailyDouble);
+      setShowDDAnimation(true);
+      setTimeout(() => {
+        setShowDDAnimation(false);
+        setWagerModal({ key });
+      }, 1500);
+      return;
+    }
 
-        // If answer already showing and SPACE pressed = finish tile manually
-        safePlay(sounds.incorrect);
-        finalizeTile(key);
-        return;
-      }
+    // hidden -> question
+    if (!revealed[key]) {
+      safePlay(sounds.revealQuestion);
+      setRevealed((p) => ({ ...p, [key]: true }));
+      setShowAnswer((p) => ({ ...p, [key]: false }));
+      setLockedOutTeams((p) => ({ ...p, [key]: [] }));
+      return;
+    }
 
-      const locked = lockedOutTeams[key] ?? [];
+    // if answer is showing, SPACE finishes the tile
+    if (showAnswer[key]) {
+      safePlay(sounds.incorrect);
+      finalizeTile(key);
+      return;
+    }
 
-      // ENTER = correct for selected team (only when answer is showing)
-      if (e.key === 'Enter' && showAnswer[key] && !completed[key]) {
-        if (selectedTeam != null && !locked.includes(selectedTeam)) {
-          setTeamScores((ts) => ts.map((v, i) => (i === selectedTeam ? v + award : v)));
-          safePlay(sounds.correct);
-          finalizeTile(key);
-        }
-        return;
-      }
+    // If question is showing but answer isn't, SPACE does nothing (judging happens via Enter/W)
+    return;
+  }
 
-      // W = wrong answer for selected team (deduct, lock out, and maybe auto-finish)
-      if (e.key.toLowerCase() === 'w' && showAnswer[key] && !completed[key]) {
-        if (selectedTeam != null && !locked.includes(selectedTeam)) {
-          setTeamScores((ts) => ts.map((v, i) => (i === selectedTeam ? v - award : v)));
-          setLockedOutTeams((p) => ({
-            ...p,
-            [key]: [...(p[key] ?? []), selectedTeam],
-          }));
-          safePlay(sounds.incorrect);
+  const locked = lockedOutTeams[key] ?? [];
+  const questionShowing = !!revealed[key] && !showAnswer[key];
+  const answerShowing = !!showAnswer[key];
 
-          const updatedLocked = [...locked, selectedTeam];
-          // If all 4 teams locked → auto finalize
-          if ([0, 1, 2, 3].every((t) => updatedLocked.includes(t))) {
-            finalizeTile(key);
-          }
-        }
-        return;
-      }
+  // ENTER = correct (ONLY when question is showing)
+  // -> awards points, reveals answer, keeps tile open until SPACE finalizes
+  if (e.key === "Enter" && questionShowing) {
+    if (selectedTeam == null) return;
+    if (locked.includes(selectedTeam)) return;
 
-      if (e.key === 'Escape') {
-        setPresentationMode(false);
-        return;
-      }
-    };
+    setTeamScores((ts) => ts.map((v, i) => (i === selectedTeam ? v + award : v)));
+    safePlay(sounds.correct);
+
+    // Reveal the answer (do NOT finalize yet)
+    safePlay(sounds.revealAnswer);
+    setShowAnswer((p) => ({ ...p, [key]: true }));
+
+    return;
+  }
+
+  // W = wrong (ONLY when question is showing)
+  // -> deducts, locks that team out, allows selecting another team and trying again
+  if (e.key.toLowerCase() === "w" && questionShowing) {
+    if (selectedTeam == null) return;
+    if (locked.includes(selectedTeam)) return;
+
+    setTeamScores((ts) => ts.map((v, i) => (i === selectedTeam ? v - award : v)));
+    setLockedOutTeams((p) => ({
+      ...p,
+      [key]: [...(p[key] ?? []), selectedTeam],
+    }));
+    safePlay(sounds.incorrect);
+
+    const updatedLocked = [...locked, selectedTeam];
+
+    // If all 4 teams are locked out, reveal answer + finalize immediately (or change if you prefer)
+    if ([0, 1, 2, 3].every((t) => updatedLocked.includes(t))) {
+      safePlay(sounds.revealAnswer);
+      setShowAnswer((p) => ({ ...p, [key]: true }));
+      finalizeTile(key);
+    }
+
+    return;
+  }
+
+  // ESC exits presentation mode
+  if (e.key === "Escape") {
+    setPresentationMode(false);
+    return;
+  }
+
+  // Optional: If answer is showing and you want ENTER to immediately finalize, you can add it here.
+};
 
     document.addEventListener('keydown', handleKey);
     return () => {
