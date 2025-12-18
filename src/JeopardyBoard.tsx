@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 
 /** ---------------------------------------
  *  Small CSS animation helper (no framer-motion dep)
@@ -320,6 +320,7 @@ export default function JeopardyBoard() {
       if (isDone) return;
 
       const questionShowing = !!revealed[key] && !showAnswer[key];
+      const answerShowing = !!revealed[key] && !!showAnswer[key];
     
 
       // SPACE progression:
