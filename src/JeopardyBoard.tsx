@@ -189,7 +189,7 @@ export default function JeopardyBoard() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   const [finalCategory] = useState("Legendary Final Category");
-  const [finalQuestion] = useState("Andy Azula used this iconic tool in 48 different UPS commercials since 2007 with the commercials ending with the phrase,"What can Brown do for you"");
+  const [finalQuestion] = useState('Andy Azula used this iconic tool in 48 different UPS commercials since 2007 with the commercials ending with the phrase,"What can Brown do for you"');
   const [finalAnswer] = useState("What is a whiteboard?");
 
   const [finalWagers, setFinalWagers] = useState<number[]>([0, 0, 0, 0]);
