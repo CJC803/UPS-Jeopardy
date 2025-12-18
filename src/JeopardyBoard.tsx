@@ -108,25 +108,6 @@ function computePodiumWithTies(ranked: TeamResult[]): RankedTeam[] {
 
   return podium.slice(0, 3);
 }
-/**
- * Arrange podium visually so the highest score is always centered
- * Returns [left, center, right]
- */
-function arrangePodiumCenter(podium: RankedTeam[]): RankedTeam[] {
-  if (podium.length === 0) return [];
-
-  // Highest score always goes in the center
-  const best = podium.reduce((a, b) => (b.score > a.score ? b : a));
-
-  const rest = podium
-    .filter((p) => p.team !== best.team)
-    .sort((a, b) => b.score - a.score);
-
-  const left = rest[0] ?? null;  // 2nd
-  const right = rest[1] ?? null; // 3rd
-
-  return [left, best, right].filter(Boolean) as RankedTeam[];
-}
 
 type QA = Record<string, { q: string; a: string }>;
 
@@ -194,11 +175,14 @@ export default function JeopardyBoard() {
   const [dailyDoubles, setDailyDoubles] = useState<string[]>([]);
   const [showDDAnimation, setShowDDAnimation] = useState(false);
 
-  // Wagers per tile (one wager per team, per DD tile)
-  const [ddWagers, setDdWagers] = useState<Record<string, number[]>>({});
-  
-  // Active Daily Double wager modal (all teams)
-  const [wagerModal, setWagerModal] = useState<{ key: string } | null>(null);
+  // Wagers per tile
+  const [ddWagers, setDdWagers] = useState<Record<string, number>>({});
+  const [wagerModal, setWagerModal] = useState<{
+    key: string;
+    teamIdx: number; // 0..3
+    min: number;
+    max: number;
+  } | null>(null);
 
   // Final Jeopardy
   const [finalJeopardy, setFinalJeopardy] = useState(false);
@@ -313,13 +297,7 @@ export default function JeopardyBoard() {
       const isDone = !!completed[key];
       const isDD = dailyDoubles.includes(key);
       const val = values[activeRow];
-
-      const ddAwardForSelectedTeam =
-        selectedTeam != null
-          ? ddWagers[key]?.[selectedTeam] ?? val
-          : val;
-      
-      const award = isDD ? ddAwardForSelectedTeam : val;
+      const award = isDD ? (ddWagers[key] ?? val) : val;
 
       // Navigation
       if (e.key === "ArrowUp") return setActiveRow((r) => Math.max(0, r - 1));
@@ -353,11 +331,14 @@ export default function JeopardyBoard() {
 
         // DD: only when going hidden -> question
         if (isDD && !revealed[key] && !showAnswer[key]) {
+          if (selectedTeam == null) return; // require selection for DD wager
+          const min = 5;
+          const max = Math.max(0, teamScores[selectedTeam] ?? 0);
           safePlay(sounds.dailyDouble);
           setShowDDAnimation(true);
           window.setTimeout(() => {
             setShowDDAnimation(false);
-            setWagerModal({ key });
+            setWagerModal({ key, teamIdx: selectedTeam, min, max });
           }, 1200);
           return;
         }
@@ -453,11 +434,16 @@ export default function JeopardyBoard() {
 
     // DD from hidden -> open wager modal
     if (isDD && !revealed[key] && !showAnswer[key]) {
+      // In host mode, let them pick the team in the modal (default to Team 1)
+      const teamIdx = selectedTeam ?? 0;
+      const min = 5;
+      const max = Math.max(0, teamScores[teamIdx] ?? 0);
+
       safePlay(sounds.dailyDouble);
       setShowDDAnimation(true);
       window.setTimeout(() => {
         setShowDDAnimation(false);
-        setWagerModal({ key });
+        setWagerModal({ key, teamIdx, min, max });
       }, 1200);
       return;
     }
@@ -491,7 +477,7 @@ export default function JeopardyBoard() {
    *  Leaderboard / Podium screen
    *  -------------------------------------- */
   if (showLeaderboard) {
-    const podium = arrangePodiumCenter(computePodiumWithTies(ranked));
+    const podium = computePodiumWithTies(ranked);
 
     return (
       <div className="min-h-screen bg-[#351C15] w-full flex flex-col items-center justify-center text-white gap-10 p-8">
@@ -840,80 +826,68 @@ export default function JeopardyBoard() {
           {/* Wager modal */}
           {wagerModal && (
             <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-              <div className="bg-white text-black p-6 rounded-xl w-[420px] flex flex-col gap-3">
-                <h2 className="text-xl font-bold text-center">Daily Double Wagers</h2>
-          
-                <div className="text-xs text-gray-600 text-center">
-                  Each team sets a wager now. If one team misses, the next team can still answer using <em>their</em> wager.
+              <div className="bg-white text-black p-6 rounded-xl w-96 flex flex-col gap-3">
+                <h2 className="text-xl font-bold text-center">Daily Double Wager</h2>
+
+                <div className="text-sm">
+                  Choose team and wager.
+                  <div className="text-xs text-gray-600 mt-1">Min $5, max current team score.</div>
                 </div>
-          
-                <div className="flex flex-col gap-2 mt-2">
-                  {[0, 1, 2, 3].map((t) => {
-                    const min = 5;
-                    const max = Math.max(0, teamScores[t] ?? 0);
-          
-                    // default wager = $5 (or max if max is 0)
-                    const defaultWager = max === 0 ? 0 : min;
-          
-                    const current = ddWagers[wagerModal.key]?.[t] ?? defaultWager;
-          
-                    return (
-                      <div key={t} className="flex items-center justify-between gap-3">
-                        <div className="font-semibold">
-                          Team {t + 1} <span className="text-gray-600">(${teamScores[t]})</span>
-                        </div>
-          
-                        <input
-                          type="number"
-                          min={defaultWager}
-                          max={max}
-                          className="border p-2 rounded w-32"
-                          value={current}
-                          onChange={(e) => {
-                            const raw = Number(e.target.value);
-                            const v = clamp(isNaN(raw) ? defaultWager : raw, defaultWager, max);
-          
-                            setDdWagers((prev) => {
-                              const arr = [...(prev[wagerModal.key] ?? [defaultWager, defaultWager, defaultWager, defaultWager])];
-                              arr[t] = v;
-                              return { ...prev, [wagerModal.key]: arr };
-                            });
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
+
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-sm font-semibold">Team</label>
+                  <select
+                    className="border rounded p-2"
+                    value={wagerModal.teamIdx}
+                    onChange={(e) => {
+                      const teamIdx = clamp(Number(e.target.value), 0, 3);
+                      const max = Math.max(0, teamScores[teamIdx] ?? 0);
+                      setWagerModal((m) => (m ? { ...m, teamIdx, max } : m));
+                      setSelectedTeam(teamIdx);
+                    }}
+                  >
+                    {[0, 1, 2, 3].map((t) => (
+                      <option key={t} value={t}>
+                        Team {t + 1} (${teamScores[t]})
+                      </option>
+                    ))}
+                  </select>
                 </div>
-          
+
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-sm font-semibold">Wager</label>
+                  <input
+                    type="number"
+                    min={wagerModal.min}
+                    max={wagerModal.max}
+                    className="border p-2 rounded w-40"
+                    value={ddWagers[wagerModal.key] ?? wagerModal.min}
+                    onChange={(e) => {
+                      const raw = Number(e.target.value);
+                      const v = clamp(isNaN(raw) ? wagerModal.min : raw, wagerModal.min, wagerModal.max);
+                      setDdWagers((p) => ({ ...p, [wagerModal.key]: v }));
+                    }}
+                  />
+                </div>
+
                 <button
                   onClick={() => {
-                    const key = wagerModal.key;
-          
-                    // Ensure all 4 wagers exist + are clamped to each team’s max
-                    setDdWagers((prev) => {
-                      const next = [...(prev[key] ?? [])];
-                      const normalized = [0, 1, 2, 3].map((t) => {
-                        const max = Math.max(0, teamScores[t] ?? 0);
-                        const min = max === 0 ? 0 : 5;
-                        const w = next[t] ?? min;
-                        return clamp(w, min, max);
-                      });
-                      return { ...prev, [key]: normalized };
-                    });
-          
+                    const chosen = wagerModal;
+                    const wager = clamp(ddWagers[chosen.key] ?? chosen.min, chosen.min, chosen.max);
+                    setDdWagers((p) => ({ ...p, [chosen.key]: wager }));
                     setWagerModal(null);
-          
-                    // Reveal question after wagers lock
+
+                    // Reveal question after wager locks
                     safePlay(sounds.revealQuestion);
-                    setRevealed((p) => ({ ...p, [key]: true }));
-                    setShowAnswer((p) => ({ ...p, [key]: false }));
-                    setLockedOutTeams((p) => ({ ...p, [key]: [] }));
+                    setRevealed((p) => ({ ...p, [chosen.key]: true }));
+                    setShowAnswer((p) => ({ ...p, [chosen.key]: false }));
+                    setLockedOutTeams((p) => ({ ...p, [chosen.key]: [] }));
                   }}
                   className="bg-[#4B2E1F] text-white py-2 rounded font-bold"
                 >
-                  Lock Wagers &amp; Reveal Question
+                  Lock Wager & Reveal Question
                 </button>
-          
+
                 <button
                   onClick={() => setWagerModal(null)}
                   className="bg-gray-200 text-gray-900 py-2 rounded font-semibold"
