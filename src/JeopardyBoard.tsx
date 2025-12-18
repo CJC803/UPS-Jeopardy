@@ -640,13 +640,25 @@ export default function JeopardyBoard() {
               >
                 Reveal Correct Answer
               </button>
-
-            <div className="bg-[#4B2E1F] border border-[#FFB500] text-[#FFB500] rounded-xl p-4 max-w-2xl w-full">
-              <div className="text-sm opacity-90 mb-1">Answer</div>
-              <div className="text-xl font-bold">{finalAnswer}</div>
-              {!finalApplied && <div className="text-xs opacity-80 mt-2">(Scores update when you reveal the answer.)</div>}
-              {finalApplied && <div className="text-xs opacity-80 mt-2">(Final wagers applied. Leaderboard is ready.)</div>}
-            </div>
+              
+              <button
+                onClick={() => setShowLeaderboard(true)}
+                disabled={!finalApplied}
+                className={[
+                  "px-6 py-3 rounded font-bold text-xl",
+                  finalApplied ? "bg-[#4B2E1F] text-[#FFB500] border border-[#FFB500]" : "bg-gray-500 text-gray-200 cursor-not-allowed",
+                ].join(" ")}
+              >
+                Show Final Podium
+              </button>
+              {finalAnswerRevealed && (
+              <div className="bg-[#4B2E1F] border border-[#FFB500] text-[#FFB500] rounded-xl p-4 max-w-2xl w-full">
+                <div className="text-sm opacity-90 mb-1">Answer</div>
+                <div className="text-xl font-bold">{finalAnswer}</div>
+                {!finalApplied && <div className="text-xs opacity-80 mt-2">(Scores update when you reveal the answer.)</div>}
+                {finalApplied && <div className="text-xs opacity-80 mt-2">(Final wagers applied. Leaderboard is ready.)</div>}
+              </div>
+            )}
 
             <button onClick={resetFinalJeopardy} className="mt-1 bg-red-600 text-white px-4 py-2 rounded">
               Exit Final Jeopardy
