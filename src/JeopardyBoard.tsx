@@ -329,16 +329,19 @@ export default function JeopardyBoard() {
       if (e.key === " ") {
         e.preventDefault();
 
-        // DD: only when going hidden -> question
+        // DD: only when going hidden -> open wager modal (team is chosen in modal)
         if (isDD && !revealed[key] && !showAnswer[key]) {
-          if (selectedTeam == null) return; // require selection for DD wager
           const min = 5;
-          const max = Math.max(0, teamScores[selectedTeam] ?? 0);
+        
+          // default team for the dropdown (if none selected yet, default to Team 1)
+          const teamIdx = selectedTeam ?? 0;
+          const max = Math.max(0, teamScores[teamIdx] ?? 0);
+        
           safePlay(sounds.dailyDouble);
           setShowDDAnimation(true);
           window.setTimeout(() => {
             setShowDDAnimation(false);
-            setWagerModal({ key, teamIdx: selectedTeam, min, max });
+            setWagerModal({ key, teamIdx, min, max });
           }, 1200);
           return;
         }
