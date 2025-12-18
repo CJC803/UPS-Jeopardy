@@ -536,6 +536,12 @@ export default function JeopardyBoard() {
       {!finalRevealQuestion && (
         <div className="bg-white text-black p-6 rounded-xl shadow-xl w-full max-w-lg flex flex-col gap-4">
           <h3 className="text-2xl font-bold text-center">Enter Wagers</h3>
+          <img
+          src="/images/Final-Clue.jpg"
+          alt="Final Jeopardy Clue"
+          className="w-full max-h-64 object-contain rounded-lg border"
+        />
+
 
           {teamScores.map((s, i) => (
             <div key={i} className="flex justify-between items-center gap-3">
