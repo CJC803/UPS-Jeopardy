@@ -122,36 +122,36 @@ export default function JeopardyBoard() {
   useInjectJeopardyStyles();
 
   // Board data
-  const categories = ["AI Basics", "AI in Everyday Life", "Famous AI Milestones", "Ethics & AI"];
+  const categories = ["Now Showing: Holiday Classics", "Miscellane-AI", "UPS Through the Years", "Cold Hard Facts"];
   const values = [100, 200, 300, 400, 500];
 
   // Key format: `${col}-${value}` e.g. "1-400"
   const getKey = (col: number, rowVal: number) => `${col}-${rowVal}`;
 
   const qa: QA = {
-    "0-100": { q: "This term refers to machines that mimic human intelligence.", a: "What is Artificial Intelligence?" },
-    "0-200": { q: "The branch of AI focused on learning from data.", a: "What is Machine Learning?" },
-    "0-300": { q: "The type of AI that can perform only one specific task.", a: "What is Narrow AI?" },
-    "0-400": { q: 'The year the term "Artificial Intelligence" was coined.', a: "What is 1956?" },
-    "0-500": { q: "The test designed by Alan Turing to measure machine intelligence.", a: "What is the Turing Test?" },
+    "0-100": { q: "This movie features Buddy, a human raised by elves at the North Pole.", a: "What is Elf?" },
+    "0-200": { q: "“Keep the change, ya filthy animal!” comes from this holiday movie.", a: "What is Home Alone?" },
+    "0-300": { q: "This actor plays Clark Griswold in National Lampoon’s Christmas Vacation.", a: "Who is Chevy Chase?" },
+    "0-400": { q: "In A Christmas Story, Ralphie desperately wants this brand-named gift.", a: "What is Red Ryder BB Gun?" },
+    "0-500": { q: "This Hallmark movie reveals that an entire town is secretly helping Santa Claus.", a: "What is Christmas Under Wraps?" },
 
-    "1-100": { q: "This AI assistant was introduced by Apple in 2011.", a: "What is Siri?" },
-    "1-200": { q: "Netflix uses this type of AI to recommend shows.", a: "What is a Recommendation System?" },
-    "1-300": { q: "Self-driving cars rely heavily on this type of sensor to map surroundings.", a: "What is LiDAR?" },
-    "1-400": { q: "This family of language models powers ChatGPT.", a: "What is GPT?" },
-    "1-500": { q: "The company that created AlphaGo.", a: "What is DeepMind?" },
+    "1-100": { q: "This AI assistant helped Iron man manage his suits, systems, and sarcasm.", a: "Who is Jarvis?" },
+    "1-200": { q: "This is what everyone should do when given an AI generated response to ensure validity.", a: "What is fact check or audit?" },
+    "1-300": { q: "This phrase describes asking AI very specific questions to get better results—a skill many learned in 2025.", a: "What is prompting?" },
+    "1-400": { q: "The acronym GPT stands for this, Generative Pre-trained ____________", a: "What is Transformer?" },
+    "1-500": { q: "This droid is fluent in millions of languages and space flight. Assists the Rebel Alliance..", a: "Who is C-3PO?" },
 
-    "2-100": { q: "IBM's AI that beat Garry Kasparov in chess.", a: "What is Deep Blue?" },
-    "2-200": { q: "Year AlphaGo defeated a world champion in Go.", a: "What is 2016?" },
-    "2-300": { q: "The AI system that beat humans on Jeopardy! (2011).", a: "What is Watson?" },
-    "2-400": { q: "The first famous chatbot created in the 1960s.", a: "What is ELIZA?" },
-    "2-500": { q: "A text-to-image model released in 2022 that popularized prompt-based image generation.", a: "What is DALL·E?" },
+    "2-100": { q: "UPS was founded as ___________ in Seattle with a $100 loan by Jim Casey and changed its name to United Parcel Service in 1919.", a: "What is American Messenger Company?" },
+    "2-200": { q: "This country was the first country UPS offered its service to outside of the USA, expanding it into the international space.", a: "What is Canada?" },
+    "2-300": { q: "UPS became the first package delivery company to do this in 1975 increasing access to its service.", a: "What is serving every issues?" },
+    "2-400": { q: "This retail company was acquired in 2001 by UPS and rebranded as The UPS Store.", a: "Wat is Mail Boxes Etc.?" },
+    "2-500": { q: "UPS had a color specific precursor in the early 1950's to today's Air products called this.", a: "What is Blue Label Air?" },
 
-    "3-100": { q: "The term for systematic unfairness in AI outcomes.", a: "What is Algorithmic Bias?" },
-    "3-200": { q: "This principle ensures AI decisions can be explained to humans.", a: "What is Explainability?" },
-    "3-300": { q: "The EU’s major AI regulation proposal.", a: "What is the AI Act?" },
-    "3-400": { q: "The idea of AI behavior matching human values and intent.", a: "What is AI Alignment?" },
-    "3-500": { q: "The term for unintended harmful consequences of AI systems.", a: "What is AI Risk?" },
+    "3-100": { q: "This phenomenon causes roads to appear wet when they're actually dangerously icy.", a: "What is Black Ice?" },
+    "3-200": { q: "This region is known as the coldest inhabited place on Earth.", a: "What is Siberia?" },
+    "3-300": { q: "This December holiday celebrates the shortest day and longest night of the year.", a: "What is the Winter Solstice?" },
+    "3-400": { q: "The day after Christmas is known as this in the United Kingdom.", a: "What is Boxing Day" },
+    "3-500": { q: "My true love gave me this many birds in the 'Twelve Days of Christmas'.", a: "What is 23?" },
   };
 
   /** ---------------------------------------
