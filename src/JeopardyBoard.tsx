@@ -108,6 +108,25 @@ function computePodiumWithTies(ranked: TeamResult[]): RankedTeam[] {
 
   return podium.slice(0, 3);
 }
+/**
+ * Arrange podium visually so the highest score is always centered
+ * Returns [left, center, right]
+ */
+function arrangePodiumCenter(podium: RankedTeam[]): RankedTeam[] {
+  if (podium.length === 0) return [];
+
+  // Highest score always goes in the center
+  const best = podium.reduce((a, b) => (b.score > a.score ? b : a));
+
+  const rest = podium
+    .filter((p) => p.team !== best.team)
+    .sort((a, b) => b.score - a.score);
+
+  const left = rest[0] ?? null;  // 2nd
+  const right = rest[1] ?? null; // 3rd
+
+  return [left, best, right].filter(Boolean) as RankedTeam[];
+}
 
 type QA = Record<string, { q: string; a: string }>;
 
@@ -477,7 +496,7 @@ export default function JeopardyBoard() {
    *  Leaderboard / Podium screen
    *  -------------------------------------- */
   if (showLeaderboard) {
-    const podium = computePodiumWithTies(ranked);
+    const podium = arrangePodiumCenter(computePodiumWithTies(ranked));
 
     return (
       <div className="min-h-screen bg-[#351C15] w-full flex flex-col items-center justify-center text-white gap-10 p-8">
