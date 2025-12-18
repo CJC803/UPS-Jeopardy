@@ -355,9 +355,14 @@ export default function JeopardyBoard() {
           return;
         }
 
-        // answer -> finalize
+        // Daily Double: once revealed, Space always clears it (silent)
+        if (isDD && revealed[key]) {
+          finalizeTile(key);
+          return;
+        }
+        
+        // Normal question: Space only clears AFTER answer is shown (silent)
         if (answerShowing) {
-          safePlay(sounds.incorrect);
           finalizeTile(key);
           return;
         }
