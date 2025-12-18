@@ -199,6 +199,7 @@ export default function JeopardyBoard() {
   const [finalTimerEnabled, setFinalTimerEnabled] = useState(false);
   const [finalCountdown, setFinalCountdown] = useState(45);
   const [finalApplied, setFinalApplied] = useState(false);
+  const [finalAnswerRevealed, setFinalAnswerRevealed] = useState(false);
 
   const finalTimerId = useRef<number | null>(null);
 
@@ -243,6 +244,7 @@ export default function JeopardyBoard() {
 
   const resetFinalJeopardy = () => {
     setFinalJeopardy(false);
+    setFinalAnswerRevealed(false);
     setShowLeaderboard(false);
     setFinalApplied(false);
     setFinalWagers([0, 0, 0, 0]);
@@ -688,15 +690,16 @@ export default function JeopardyBoard() {
             </button>
 
             <button
-              onClick={() => {
-                setFinalJeopardy(true);
-                setFinalApplied(false);
-                setShowLeaderboard(false);
-              }}
-              className="bg-purple-700 py-2 px-3 rounded hover:bg-purple-600 text-sm font-semibold"
-            >
-              Start Final Jeopardy
-            </button>
+            onClick={() => {
+              setFinalJeopardy(true);
+              setFinalApplied(false);
+              setShowLeaderboard(false);
+              setFinalAnswerRevealed(false); // 👈 add this
+            }}
+            className="bg-purple-700 py-2 px-3 rounded hover:bg-purple-600 text-sm font-semibold"
+          >
+            Start Final Jeopardy
+          </button>
 
             <button
               onClick={() => setShowLeaderboard(true)}
