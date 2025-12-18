@@ -628,18 +628,18 @@ export default function JeopardyBoard() {
 
               <button
                 onClick={() => {
+                  // apply wagers once
                   if (!finalApplied) {
                     setTeamScores((scores) => applyFinalWagers(scores, finalWagers, finalResults));
                     setFinalApplied(true);
                   }
-                  setShowLeaderboard(true);
+                  setFinalAnswerRevealed(true); // 👈 this is the whole point
                   safeStop(sounds.finalThink);
                 }}
                 className="bg-green-400 text-blue-900 px-6 py-3 rounded font-bold text-xl"
               >
                 Reveal Correct Answer
               </button>
-            </div>
 
             <div className="bg-[#4B2E1F] border border-[#FFB500] text-[#FFB500] rounded-xl p-4 max-w-2xl w-full">
               <div className="text-sm opacity-90 mb-1">Answer</div>
