@@ -528,146 +528,171 @@ export default function JeopardyBoard() {
    *  Final Jeopardy screen
    *  -------------------------------------- */
   if (finalJeopardy) {
-    return (
-      <div className="min-h-screen bg-[#351C15] w-full flex flex-col items-center justify-center text-white gap-6 p-8">
-        <h1 className="text-5xl font-bold text-[#FFB500]">FINAL JEOPARDY</h1>
-        <h2 className="text-3xl">{finalCategory}</h2>
+  return (
+    <div className="min-h-screen bg-[#351C15] w-full flex flex-col items-center justify-center text-white gap-6 p-8">
+      <h1 className="text-5xl font-bold text-[#FFB500]">FINAL JEOPARDY</h1>
+      <h2 className="text-3xl">{finalCategory}</h2>
 
-        {!finalRevealQuestion && (
-          <div className="bg-white text-black p-6 rounded-xl shadow-xl w-full max-w-lg flex flex-col gap-4">
-            <h3 className="text-2xl font-bold text-center">Enter Wagers</h3>
+      {!finalRevealQuestion && (
+        <div className="bg-white text-black p-6 rounded-xl shadow-xl w-full max-w-lg flex flex-col gap-4">
+          <h3 className="text-2xl font-bold text-center">Enter Wagers</h3>
 
-            {teamScores.map((s, i) => (
-              <div key={i} className="flex justify-between items-center gap-3">
-                <span className="font-bold">
-                  Team {i + 1} (${s})
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  max={Math.max(0, s)}
-                  className="border p-1 rounded w-24"
-                  value={finalWagers[i]}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    setFinalWagers((w) => w.map((x, idx) => (idx === i ? clamp(v, 0, Math.max(0, s)) : x)));
-                  }}
-                />
-              </div>
-            ))}
+          {teamScores.map((s, i) => (
+            <div key={i} className="flex justify-between items-center gap-3">
+              <span className="font-bold">Team {i + 1} (${s})</span>
+              <input
+                type="number"
+                min={0}
+                max={Math.max(0, s)}
+                className="border p-1 rounded w-24"
+                value={finalWagers[i]}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setFinalWagers((w) =>
+                    w.map((x, idx) => (idx === i ? clamp(v, 0, Math.max(0, s)) : x))
+                  );
+                }}
+              />
+            </div>
+          ))}
 
-            <button
-              onClick={() => setFinalRevealQuestion(true)}
-              className="bg-amber-800 text-white py-2 rounded font-bold"
-            >
-              Lock Wagers & Reveal Question
-            </button>
+          <button
+            onClick={() => setFinalRevealQuestion(true)}
+            className="bg-amber-800 text-white py-2 rounded font-bold"
+          >
+            Lock Wagers & Reveal Question
+          </button>
 
-            <p className="text-xs text-center text-gray-600 mt-1">
-              Timer starts when you press “Start 45s Timer” after the question is revealed.
-            </p>
-          </div>
-        )}
+          <p className="text-xs text-center text-gray-600 mt-1">
+            Timer starts when you press “Start 45s Timer” after the question is revealed.
+          </p>
+        </div>
+      )}
 
-        {finalRevealQuestion && (
-          <div className="flex flex-col items-center gap-6 max-w-2xl text-center w-full">
-            <p className="text-2xl">{finalQuestion}</p>
+      {finalRevealQuestion && (
+        <div className="flex flex-col items-center gap-6 max-w-2xl text-center w-full">
+          <p className="text-2xl">{finalQuestion}</p>
 
-            <div className="bg-white text-black p-5 rounded-xl shadow-xl w-full max-w-2xl">
-              <h3 className="text-xl font-bold mb-3">Mark Results</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {teamScores.map((s, i) => (
-                  <div key={i} className="flex items-center justify-between border rounded-lg px-3 py-2">
-                    <div className="text-left">
-                      <div className="font-bold">Team {i + 1}</div>
-                      <div className="text-sm text-gray-600">
-                        Score: ${s} • Wager: ${finalWagers[i]}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setFinalResults((r) => r.map((v, idx) => (idx === i ? true : v)))}
-                        className={[
-                          "px-3 py-1 rounded font-bold border",
-                          finalResults[i] ? "bg-green-600 text-white border-green-700" : "bg-white text-green-700 border-green-700",
-                        ].join(" ")}
-                      >
-                        ✓ Correct
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFinalResults((r) => r.map((v, idx) => (idx === i ? false : v)))}
-                        className={[
-                          "px-3 py-1 rounded font-bold border",
-                          !finalResults[i] ? "bg-red-600 text-white border-red-700" : "bg-white text-red-700 border-red-700",
-                        ].join(" ")}
-                      >
-                        ✕ Wrong
-                      </button>
+          <div className="bg-white text-black p-5 rounded-xl shadow-xl w-full max-w-2xl">
+            <h3 className="text-xl font-bold mb-3">Mark Results</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {teamScores.map((s, i) => (
+                <div key={i} className="flex items-center justify-between border rounded-lg px-3 py-2">
+                  <div className="text-left">
+                    <div className="font-bold">Team {i + 1}</div>
+                    <div className="text-sm text-gray-600">
+                      Score: ${s} • Wager: ${finalWagers[i]}
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFinalResults((r) => r.map((v, idx) => (idx === i ? true : v)))}
+                      className={[
+                        "px-3 py-1 rounded font-bold border",
+                        finalResults[i]
+                          ? "bg-green-600 text-white border-green-700"
+                          : "bg-white text-green-700 border-green-700",
+                      ].join(" ")}
+                    >
+                      ✓ Correct
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFinalResults((r) => r.map((v, idx) => (idx === i ? false : v)))}
+                      className={[
+                        "px-3 py-1 rounded font-bold border",
+                        !finalResults[i]
+                          ? "bg-red-600 text-white border-red-700"
+                          : "bg-white text-red-700 border-red-700",
+                      ].join(" ")}
+                    >
+                      ✕ Wrong
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
+          </div>
 
-            {finalTimerEnabled && <p className="text-4xl font-bold text-[#FFB500]">{finalCountdown}</p>}
+          {finalTimerEnabled && (
+            <p className="text-4xl font-bold text-[#FFB500]">{finalCountdown}</p>
+          )}
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => {
-                  safePlay(sounds.finalThink);
-                  setFinalTimerEnabled(true);
-                  setFinalCountdown(45);
-                  safePlay(sounds.timerBeep);
-                }}
-                className="bg-yellow-300 text-blue-900 px-6 py-2 rounded font-bold"
-              >
-                Start 45s Timer
-              </button>
+          {/* Buttons row */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => {
+                safePlay(sounds.finalThink);
+                setFinalTimerEnabled(true);
+                setFinalCountdown(45);
+                safePlay(sounds.timerBeep);
+              }}
+              className="bg-yellow-300 text-blue-900 px-6 py-2 rounded font-bold"
+            >
+              Start 45s Timer
+            </button>
 
-              <button
-                onClick={() => {
-                  // apply wagers once
-                  if (!finalApplied) {
-                    setTeamScores((scores) => applyFinalWagers(scores, finalWagers, finalResults));
-                    setFinalApplied(true);
-                  }
-                  setFinalAnswerRevealed(true); // 👈 this is the whole point
-                  safeStop(sounds.finalThink);
-                }}
-                className="bg-green-400 text-blue-900 px-6 py-3 rounded font-bold text-xl"
-              >
-                Reveal Correct Answer
-              </button>
-              
-              <button
-                onClick={() => setShowLeaderboard(true)}
-                disabled={!finalApplied}
-                className={[
-                  "px-6 py-3 rounded font-bold text-xl",
-                  finalApplied ? "bg-[#4B2E1F] text-[#FFB500] border border-[#FFB500]" : "bg-gray-500 text-gray-200 cursor-not-allowed",
-                ].join(" ")}
-              >
-                Show Final Podium
-              </button>
-              {finalAnswerRevealed && (
-              <div className="bg-[#4B2E1F] border border-[#FFB500] text-[#FFB500] rounded-xl p-4 max-w-2xl w-full">
-                <div className="text-sm opacity-90 mb-1">Answer</div>
-                <div className="text-xl font-bold">{finalAnswer}</div>
-                {!finalApplied && <div className="text-xs opacity-80 mt-2">(Scores update when you reveal the answer.)</div>}
-                {finalApplied && <div className="text-xs opacity-80 mt-2">(Final wagers applied. Leaderboard is ready.)</div>}
-              </div>
-            )}
+            <button
+              onClick={() => {
+                if (!finalApplied) {
+                  setTeamScores((scores) => applyFinalWagers(scores, finalWagers, finalResults));
+                  setFinalApplied(true);
+                }
+                setFinalAnswerRevealed(true);
+                safeStop(sounds.finalThink);
+              }}
+              className="bg-green-400 text-blue-900 px-6 py-3 rounded font-bold text-xl"
+            >
+              Reveal Correct Answer
+            </button>
 
-            <button onClick={resetFinalJeopardy} className="mt-1 bg-red-600 text-white px-4 py-2 rounded">
-              Exit Final Jeopardy
+            <button
+              onClick={() => setShowLeaderboard(true)}
+              disabled={!finalApplied}
+              className={[
+                "px-6 py-3 rounded font-bold text-xl",
+                finalApplied
+                  ? "bg-[#4B2E1F] text-[#FFB500] border border-[#FFB500]"
+                  : "bg-gray-500 text-gray-200 cursor-not-allowed",
+              ].join(" ")}
+            >
+              Show Final Podium
             </button>
           </div>
-        )}
-      </div>
-    );
-  }
+
+          {/* Answer panel */}
+          {finalAnswerRevealed && (
+            <div className="bg-[#4B2E1F] border border-[#FFB500] text-[#FFB500] rounded-xl p-4 max-w-2xl w-full">
+              <div className="text-sm opacity-90 mb-1">Answer</div>
+              <div className="text-xl font-bold">{finalAnswer}</div>
+              {!finalApplied && (
+                <div className="text-xs opacity-80 mt-2">
+                  (Scores update when you reveal the answer.)
+                </div>
+              )}
+              {finalApplied && (
+                <div className="text-xs opacity-80 mt-2">
+                  (Final wagers applied. Leaderboard is ready.)
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={resetFinalJeopardy}
+            className="mt-1 bg-red-600 text-white px-4 py-2 rounded"
+          >
+            Exit Final Jeopardy
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
   /** ---------------------------------------
    *  Main board screen
