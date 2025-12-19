@@ -143,7 +143,7 @@ export default function JeopardyBoard() {
 
     "2-100": { q: "UPS was founded as ___________ in Seattle with a $100 loan by Jim Casey and changed its name to United Parcel Service in 1919.", a: "What is American Messenger Company?" },
     "2-200": { q: "This country was the first country UPS offered its service to outside of the USA, expanding it into the international space.", a: "What is Canada?" },
-    "2-300": { q: "UPS became the first package delivery company to do this in 1975 increasing access to its service.", a: "What is serving every address?" },
+    "2-300": { q: "UPS became the first package delivery company to do this in 1975, increasing access to its service.", a: "What is serving every address?" },
     "2-400": { q: "This retail company was acquired in 2001 by UPS and rebranded as The UPS Store.", a: "What is Mail Boxes Etc.?" },
     "2-500": { q: "UPS had a color specific precursor in the early 1950's to today's Air products called this.", a: "What is Blue Label Air?" },
 
