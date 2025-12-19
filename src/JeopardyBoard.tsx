@@ -484,45 +484,69 @@ export default function JeopardyBoard() {
   const ranked = useMemo(() => rankTeams(teamScores), [teamScores]);
 
   /** ---------------------------------------
-   *  Leaderboard / Podium screen
-   *  -------------------------------------- */
-  if (showLeaderboard) {
-    const podium = computePodiumWithTies(ranked);
+ *  Leaderboard / Podium screen
+ *  -------------------------------------- */
+if (showLeaderboard) {
+  const podium = computePodiumWithTies(ranked);
 
-    return (
-      <div className="min-h-screen bg-[#351C15] w-full flex flex-col items-center justify-center text-white gap-10 p-8">
-        <h1 className="text-6xl font-bold text-[#FFB500]">FINAL PODIUM</h1>
+  // We want the best score centered + tallest
+  // computePodiumWithTies returns ranked order already (best first)
+  const best = podium[0] ?? null;   // center
+  const second = podium[1] ?? null; // left
+  const third = podium[2] ?? null;  // right
 
-        <div className="flex items-end gap-8 flex-wrap justify-center">
-          {podium.map((r, i) => (
-            <div
-              key={r.team}
-              className={[
-                "flex flex-col items-center justify-end rounded-xl font-bold shadow-xl px-6 py-4",
-                i === 1 ? "bg-[#FFB500] text-[#351C15] h-64" : i === 0 ? "bg-[#4B2E1F] text-[#FFB500] h-52" : "bg-[#4B2E1F]/80 text-[#FFB500] h-44",
-              ].join(" ")}
-            >
-              <div className="text-4xl mb-2">#{r.rank}</div>
-              <div className="text-2xl">Team {r.team}</div>
-              <div className="text-3xl">${r.score}</div>
-            </div>
-          ))}
-        </div>
+  return (
+    <div className="min-h-screen bg-[#351C15] w-full flex flex-col items-center justify-center text-white gap-10 p-8">
+      <h1 className="text-6xl font-bold text-[#FFB500]">FINAL PODIUM</h1>
 
-        <div className="flex gap-4 flex-wrap justify-center">
-          <button onClick={resetFinalJeopardy} className="mt-8 bg-red-600 text-white px-8 py-4 rounded font-bold text-xl">
-            Reset Game
-          </button>
-          <button
-            onClick={() => setShowLeaderboard(false)}
-            className="mt-8 bg-[#4B2E1F] text-[#FFB500] px-8 py-4 rounded font-bold text-xl border border-[#FFB500]"
-          >
-            Back to Board
-          </button>
-        </div>
+      <div className="flex items-end gap-8 flex-wrap justify-center">
+        {/* LEFT = #2 */}
+        {second ? (
+          <div className="flex flex-col items-center justify-end rounded-xl font-bold shadow-xl px-6 py-4 bg-[#4B2E1F] text-[#FFB500] h-52">
+            <div className="text-4xl mb-2">#{second.rank}</div>
+            <div className="text-2xl">Team {second.team}</div>
+            <div className="text-3xl">${second.score}</div>
+          </div>
+        ) : (
+          <div className="w-[220px]" />
+        )}
+
+        {/* CENTER = #1 (largest) */}
+        {best && (
+          <div className="flex flex-col items-center justify-end rounded-xl font-bold shadow-xl px-6 py-4 bg-[#FFB500] text-[#351C15] h-64">
+            <div className="text-4xl mb-2">#{best.rank}</div>
+            <div className="text-2xl">Team {best.team}</div>
+            <div className="text-3xl">${best.score}</div>
+          </div>
+        )}
+
+        {/* RIGHT = #3 */}
+        {third ? (
+          <div className="flex flex-col items-center justify-end rounded-xl font-bold shadow-xl px-6 py-4 bg-[#4B2E1F]/80 text-[#FFB500] h-44">
+            <div className="text-4xl mb-2">#{third.rank}</div>
+            <div className="text-2xl">Team {third.team}</div>
+            <div className="text-3xl">${third.score}</div>
+          </div>
+        ) : (
+          <div className="w-[220px]" />
+        )}
       </div>
-    );
-  }
+
+      <div className="flex gap-4 flex-wrap justify-center">
+        <button onClick={resetFinalJeopardy} className="mt-8 bg-red-600 text-white px-8 py-4 rounded font-bold text-xl">
+          Reset Game
+        </button>
+        <button
+          onClick={() => setShowLeaderboard(false)}
+          className="mt-8 bg-[#4B2E1F] text-[#FFB500] px-8 py-4 rounded font-bold text-xl border border-[#FFB500]"
+        >
+          Back to Board
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
   /** ---------------------------------------
    *  Final Jeopardy screen
