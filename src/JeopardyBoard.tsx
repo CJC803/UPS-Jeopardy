@@ -144,13 +144,13 @@ export default function JeopardyBoard() {
     "2-100": { q: "UPS was founded as ___________ in Seattle with a $100 loan by Jim Casey and changed its name to United Parcel Service in 1919.", a: "What is American Messenger Company?" },
     "2-200": { q: "This country was the first country UPS offered its service to outside of the USA, expanding it into the international space.", a: "What is Canada?" },
     "2-300": { q: "UPS became the first package delivery company to do this in 1975 increasing access to its service.", a: "What is serving every address?" },
-    "2-400": { q: "This retail company was acquired in 2001 by UPS and rebranded as The UPS Store.", a: "Wat is Mail Boxes Etc.?" },
+    "2-400": { q: "This retail company was acquired in 2001 by UPS and rebranded as The UPS Store.", a: "What is Mail Boxes Etc.?" },
     "2-500": { q: "UPS had a color specific precursor in the early 1950's to today's Air products called this.", a: "What is Blue Label Air?" },
 
     "3-100": { q: "This phenomenon causes roads to appear wet when they're actually dangerously icy.", a: "What is Black Ice?" },
     "3-200": { q: "This region is known as the coldest inhabited place on Earth.", a: "What is Siberia?" },
     "3-300": { q: "This December holiday celebrates the shortest day and longest night of the year.", a: "What is the Winter Solstice?" },
-    "3-400": { q: "The day after Christmas is known as this in the United Kingdom.", a: "What is Boxing Day" },
+    "3-400": { q: "The day after Christmas is known as this in the United Kingdom.", a: "What is Boxing Day?" },
     "3-500": { q: "My true love gave me this many birds in the 'Twelve Days of Christmas'.", a: "What is 23?" },
   };
 
