@@ -828,7 +828,7 @@ export default function JeopardyBoard() {
                     key={key}
                     onClick={() => handleClickTile(col, row)}
                     className={[
-                      "h-24 flex items-center justify-center rounded font-bold px-2 text-center leading-tight overflow-hidden ..."
+                      "h-24 flex items-center justify-center rounded font-bold px-2 text-center leading-tight overflow-hidden ...",
                       isDone ? "bg-gray-600 text-gray-400" : "bg-[#4B2E1F] text-[#FFB500]",
                       isActive ? "ring-4 ring-[#FFB500] scale-105" : "",
                     ].join(" ")}
