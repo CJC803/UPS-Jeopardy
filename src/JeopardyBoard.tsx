@@ -828,17 +828,21 @@ export default function JeopardyBoard() {
                     key={key}
                     onClick={() => handleClickTile(col, row)}
                     className={[
-                      "h-24 flex items-center justify-center rounded text-3xl font-bold cursor-pointer select-none transition-transform",
+                      "h-24 flex items-center justify-center rounded font-bold px-2 text-center leading-tight overflow-hidden ..."
                       isDone ? "bg-gray-600 text-gray-400" : "bg-[#4B2E1F] text-[#FFB500]",
                       isActive ? "ring-4 ring-[#FFB500] scale-105" : "",
                     ].join(" ")}
                   >
                     {!revealed[key] && !isDone && <span>${val}</span>}
                     {revealed[key] && !showAnswer[key] && !isDone && (
-                      <span className="px-2 text-base text-white">{qa[key]?.q ?? "Missing question"}</span>
+                      <span className="w-full text-white text-[clamp(10px,1.2vw,14px)] leading-tight break-words">
+                      {qa[key]?.q ?? "Missing question"}
+                    </span>
                     )}
                     {showAnswer[key] && !isDone && (
-                      <span className="px-2 text-lg italic text-green-200">{qa[key]?.a ?? "Missing answer"}</span>
+                      <span className="w-full italic text-green-200 text-[clamp(11px,1.3vw,16px)] leading-tight break-words">
+                      {qa[key]?.a ?? "Missing answer"}
+                    </span>
                     )}
                     {isDone && <span className="text-xl">—</span>}
                   </div>
