@@ -135,7 +135,7 @@ export default function JeopardyBoard() {
     "0-400": { q: "In A Christmas Story, Ralphie desperately wants this brand-named gift.", a: "What is Red Ryder BB Gun?" },
     "0-500": { q: "This Hallmark movie reveals that an entire town is secretly helping Santa Claus.", a: "What is Christmas Under Wraps?" },
 
-    "1-100": { q: "This AI assistant helped Iron man manage his suits, systems, and sarcasm.", a: "Who is Jarvis?" },
+    "1-100": { q: "This AI assistant helped Iron Man manage his suits, systems, and sarcasm.", a: "Who is Jarvis?" },
     "1-200": { q: "This is what everyone should do when given an AI generated response to ensure validity.", a: "What is fact check or audit?" },
     "1-300": { q: "This phrase describes asking AI very specific questions to get better results—a skill many learned in 2025.", a: "What is prompting?" },
     "1-400": { q: "The acronym GPT stands for this, Generative Pre-trained ____________", a: "What is Transformer?" },
